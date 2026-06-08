@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth, ROLE_META } from "../auth/AuthProvider";
 import { KitchenService } from "../db/services/kitchen.js";
 import { useLang, LangSwitcher } from "../i18n/LanguageContext.jsx";
+import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Kitchen Workflow System  ·  v2.0
@@ -20,6 +21,25 @@ const KDB = {
 // ─── Status config ────────────────────────────────────
 const STATUS_LIST = ["New","Preparing","Ready","Served","Cancelled"];
 const ACTIVE_STATUSES = ["New","Preparing","Ready"];
+
+// ─── Firebase Status Mapping ───────────────────────────
+// Firebase uses: pending, preparing, ready, completed, cancelled
+// Display uses: New, Preparing, Ready, Served, Cancelled
+const FIREBASE_TO_DISPLAY_STATUS = {
+  'pending': 'New',
+  'preparing': 'Preparing',
+  'ready': 'Ready',
+  'completed': 'Served',
+  'cancelled': 'Cancelled',
+};
+
+const DISPLAY_TO_FIREBASE_STATUS = {
+  'New': 'pending',
+  'Preparing': 'preparing',
+  'Ready': 'ready',
+  'Served': 'completed',
+  'Cancelled': 'cancelled',
+};
 
 const S_CFG = {
   New:       { col:"#58a6ff", bg:"#58a6ff14", bdr:"#58a6ff45", next:"Preparing", btn:"startPreparing", icon:"🆕", label:"NEW"       },
@@ -55,18 +75,34 @@ const URG_COL = { ok:"#3fb950", low:"#3fb950", medium:"#f0a500", high:"#f85149",
 const URG_LABEL = { ok:"", low:"", medium:"⚠ Slow", high:"🔥 Late", critical:"🚨 OVERDUE" };
 
 // ─── Helpers ──────────────────────────────────────────
+function toDate(value) {
+  // Handle Firebase Timestamp objects
+  if (value && typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  // Handle ISO strings or Date objects
+  return new Date(value);
+}
+
 function fmtElapsed(sentAt) {
-  const total = Math.max(0, Math.floor((Date.now()-new Date(sentAt).getTime())/1000));
-  const m = Math.floor(total/60), s = total%60;
-  return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  if (!sentAt) return "00:00";
+  const sentDate = toDate(sentAt);
+  const total = Math.max(0, Math.floor((Date.now() - sentDate.getTime()) / 1000));
+  const m = Math.floor(total / 60), s = total % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
+
 function fmtTime(iso) {
-  return new Date(iso).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+  if (!iso) return "";
+  const date = toDate(iso);
+  return date.toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit"});
 }
+
 function fmtClock() {
-  return new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  return new Date().toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
 }
-function safeArr(v) { return Array.isArray(v)?v:[]; }
+
+function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 // ─── Sound alert ──────────────────────────────────────
 function playBeep(ctxRef) {
@@ -110,6 +146,19 @@ export default function KitchenDisplay({ onBack }) {
   const canAct = user?.role === "admin" || user?.role === "kitchen"; // cashier = view only
   const isKitchenOnly = user?.role === "kitchen"; // kitchen staff: no Back to POS, no Sign-Out nav
 
+  // Check if Firebase services are available (tenant mode)
+  let firebaseServices = null;
+  let firebaseServicesStable = false;
+  try {
+    firebaseServices = useFirebaseServices();
+    firebaseServicesStable = true;
+  } catch {
+    // Not in Firebase context, use local IndexedDB
+    firebaseServices = null;
+    firebaseServicesStable = false;
+  }
+  const useFirebase = firebaseServicesStable && !!firebaseServices;
+
   const [orders,         setOrders]         = useState([]);
   const [statFil,        setStatFil]        = useState("All");
   const [typeFil,        setTypeFil]        = useState("All");
@@ -125,6 +174,7 @@ export default function KitchenDisplay({ onBack }) {
 
   const knownRef = useRef(new Set());
   const firstRef = useRef(true);
+  const firstLoadRef = useRef(true);
   const audioRef = useRef(null);
   const soundRef = useRef(soundOn);
   useEffect(()=>{ soundRef.current=soundOn; },[soundOn]);
@@ -135,13 +185,59 @@ export default function KitchenDisplay({ onBack }) {
     return ()=>clearInterval(t);
   },[]);
 
-  // ── Poll IDB every 2s + LS fallback ───────────────
+  // ── Poll IDB/Firebase every 2s + LS fallback ───────────────
   const loadOrders = useCallback(async()=>{
     let data=[];
     try {
-      data = await KitchenService.getAll();
-      if (!Array.isArray(data)||data.length===0) data=KDB.get(KITCHEN_KEY);
-    } catch(_){ data=KDB.get(KITCHEN_KEY); }
+      if (useFirebase && firebaseServices?.kitchen) {
+        // Firebase mode - load from Firestore
+        if (firstLoadRef.current) {
+          console.log("🍳 KitchenDisplay - Mode: Firebase (Tenant)");
+          console.log("📡 Loading orders from Firebase...");
+        }
+        const rawData = await firebaseServices.kitchen.getAll();
+        // Convert Firebase status to display status and deduplicate by ID
+        const seenIds = new Set();
+        data = rawData
+          .map(order => {
+            // Convert Firebase Timestamp to ISO string for sentAt/updatedAt
+            const sentAt = order.sentAt?.toDate ? order.sentAt.toDate().toISOString() : order.sentAt;
+            const updatedAt = order.updatedAt?.toDate ? order.updatedAt.toDate().toISOString() : order.updatedAt;
+            const createdAt = order.createdAt?.toDate ? order.createdAt.toDate().toISOString() : order.createdAt;
+            
+            return {
+              ...order,
+              sentAt,
+              updatedAt,
+              createdAt,
+              status: FIREBASE_TO_DISPLAY_STATUS[order.status] || order.status,
+            };
+          })
+          .filter(order => {
+            if (!order.id || seenIds.has(order.id)) {
+              console.warn("⚠️ Skipping duplicate or invalid order:", order);
+              return false;
+            }
+            seenIds.add(order.id);
+            return true;
+          });
+        if (firstLoadRef.current) {
+          console.log("✅ Loaded", data.length, "unique orders from Firebase");
+          firstLoadRef.current = false;
+        }
+      } else {
+        if (firstLoadRef.current) {
+          console.log("🍳 KitchenDisplay - Mode: IndexedDB (Local)");
+          firstLoadRef.current = false;
+        }
+        // Local mode - load from IndexedDB
+        data = await KitchenService.getAll();
+        if (!Array.isArray(data)||data.length===0) data=KDB.get(KITCHEN_KEY);
+      }
+    } catch(err){ 
+      console.error("❌ Error loading orders:", err);
+      data=KDB.get(KITCHEN_KEY); 
+    }
 
     setOrders(data);
 
@@ -157,62 +253,133 @@ export default function KitchenDisplay({ onBack }) {
       if (soundRef.current) playBeep(audioRef);
     }
     data.forEach(o=>o?.id&&knownRef.current.add(o.id));
-  },[]);
+  },[useFirebase, firebaseServices]);
 
   useEffect(()=>{ loadOrders(); const t=setInterval(loadOrders,2000); return()=>clearInterval(t); },[loadOrders]);
 
   // ── Write helper (IDB + LS bridge) ────────────────
   function writeOrders(updated) {
     setOrders(updated);
-    KDB.set(KITCHEN_KEY, updated);
+    if (!useFirebase) {
+      KDB.set(KITCHEN_KEY, updated);
+    }
   }
 
   // ── Advance status ─────────────────────────────────
-  function advance(id) {
-    const updated = orders.map(o=>{
-      if (o.id!==id) return o;
-      const nxt=S_CFG[o.status]?.next;
-      return nxt ? {...o,status:nxt,updatedAt:new Date().toISOString()} : o;
+  async function advance(id) {
+    const order = orders.find(o => o.id === id);
+    if (!order) return;
+    
+    const nxt = S_CFG[order.status]?.next;
+    if (!nxt) return;
+    
+    const updated = orders.map(o => {
+      if (o.id !== id) return o;
+      return { ...o, status: nxt, updatedAt: new Date().toISOString() };
     });
+    
     writeOrders(updated);
-    KitchenService.advance(id).catch(()=>{});
+    
+    try {
+      if (useFirebase && firebaseServices?.kitchen) {
+        // Convert display status to Firebase status
+        const firebaseStatus = DISPLAY_TO_FIREBASE_STATUS[nxt] || nxt.toLowerCase();
+        console.log("🔄 Updating status to", nxt, "(" + firebaseStatus + ") in Firebase for order", id);
+        await firebaseServices.kitchen.updateStatus(id, firebaseStatus);
+      } else {
+        await KitchenService.advance(id);
+      }
+    } catch(err) {
+      console.error("❌ Error advancing order:", err);
+    }
   }
 
   // ── Cancel order ───────────────────────────────────
-  function cancelOrder(id) {
-    const updated = orders.map(o=>
-      o.id===id ? {...o,status:"Cancelled",updatedAt:new Date().toISOString()} : o
+  async function cancelOrder(id) {
+    const updated = orders.map(o =>
+      o.id === id ? { ...o, status: "Cancelled", updatedAt: new Date().toISOString() } : o
     );
     writeOrders(updated);
-    KitchenService.save(updated.find(o=>o.id===id)).catch(()=>{});
+    
+    try {
+      if (useFirebase && firebaseServices?.kitchen) {
+        console.log("🔄 Cancelling order in Firebase:", id);
+        await firebaseServices.kitchen.updateStatus(id, "cancelled");
+      } else {
+        await KitchenService.save(updated.find(o => o.id === id));
+      }
+    } catch(err) {
+      console.error("❌ Error cancelling order:", err);
+    }
   }
 
   // ── Set priority ───────────────────────────────────
-  function setPriority(id, priority) {
-    const updated = orders.map(o=>
-      o.id===id ? {...o,priority,updatedAt:new Date().toISOString()} : o
+  async function setPriority(id, priority) {
+    const updated = orders.map(o =>
+      o.id === id ? { ...o, priority, updatedAt: new Date().toISOString() } : o
     );
     writeOrders(updated);
-    KitchenService.save(updated.find(o=>o.id===id)).catch(()=>{});
+    
+    try {
+      if (useFirebase && firebaseServices?.kitchen) {
+        console.log("🔄 Setting priority in Firebase:", id, priority);
+        // Firebase kitchen service might not have setPriority, need to check
+        if (firebaseServices.kitchen.setPriority) {
+          await firebaseServices.kitchen.setPriority(id, priority);
+        } else {
+          // Fallback: update the document with priority field
+          await firebaseServices.kitchen.updateStatus(id, updated.find(o => o.id === id).status);
+        }
+      } else {
+        await KitchenService.save(updated.find(o => o.id === id));
+      }
+    } catch(err) {
+      console.error("❌ Error setting priority:", err);
+    }
+    
     setPriorityModal(null);
   }
 
   // ── Dismiss single ─────────────────────────────────
-  function dismiss(id) {
-    const updated=orders.filter(o=>o.id!==id);
+  async function dismiss(id) {
+    const updated = orders.filter(o => o.id !== id);
     writeOrders(updated);
-    KitchenService.delete(id).catch(()=>{});
     knownRef.current.delete(id);
+    
+    try {
+      if (useFirebase && firebaseServices?.kitchen) {
+        console.log("🗑 Deleting order from Firebase:", id);
+        await firebaseServices.kitchen.delete(id);
+      } else {
+        await KitchenService.delete(id);
+      }
+    } catch(err) {
+      console.error("❌ Error deleting order:", err);
+    }
   }
 
   // ── Clear completed ────────────────────────────────
-  function clearCompleted() {
-    orders.filter(o=>o.status==="Served"||o.status==="Cancelled")
-          .forEach(o=>knownRef.current.delete(o.id));
-    const remaining=orders.filter(o=>o.status!=="Served"&&o.status!=="Cancelled");
+  async function clearCompleted() {
+    const completedOrders = orders.filter(o => o.status === "Served" || o.status === "Cancelled");
+    completedOrders.forEach(o => knownRef.current.delete(o.id));
+    
+    const remaining = orders.filter(o => o.status !== "Served" && o.status !== "Cancelled");
     writeOrders(remaining);
-    KitchenService.clearServed().catch(()=>{});
-    setShowClearModal(false); setShowCompleted(false);
+    
+    try {
+      if (useFirebase && firebaseServices?.kitchen) {
+        console.log("🗑 Clearing", completedOrders.length, "completed orders from Firebase");
+        // Delete each completed order
+        await Promise.all(completedOrders.map(o => firebaseServices.kitchen.delete(o.id)));
+      } else {
+        await KitchenService.clearServed();
+      }
+    } catch(err) {
+      console.error("❌ Error clearing completed orders:", err);
+    }
+    
+    setShowClearModal(false);
+    setShowCompleted(false);
   }
 
   // ── Filter & sort ──────────────────────────────────
@@ -231,7 +398,8 @@ export default function KitchenDisplay({ onBack }) {
   });
 
   const active    = filtered.filter(o=>ACTIVE_STATUSES.includes(o.status));
-  const done      = filtered.filter(o=>o.status==="Served"||o.status==="Cancelled");
+  const cancelled = filtered.filter(o=>o.status==="Cancelled");
+  const done      = filtered.filter(o=>o.status==="Served");
   const allDone   = orders.filter(o=>o.status==="Served"||o.status==="Cancelled");
 
   const counts = STATUS_LIST.reduce((a,s)=>{a[s]=orders.filter(o=>o.status===s).length;return a;},{All:orders.length});
@@ -467,7 +635,23 @@ export default function KitchenDisplay({ onBack }) {
                       onAdvance={()=>advance(o.id)}
                       onCancel={()=>cancelOrder(o.id)}
                       onSetPriority={(p)=>setPriority(o.id,p)}
+                      onOpenPriorityModal={()=>setPriorityModal({id:o.id,orderNo:o.orderNo,current:o.priority||"Normal"})}
                     />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cancelled orders - always visible */}
+            {cancelled.length>0 && (
+              <div style={{marginBottom:24}}>
+                <SectionHead label="🚫 Cancelled Orders" count={cancelled.length} color="#f85149"/>
+                <div className="kv-grid"
+                  style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
+                  {cancelled.map(o=>(
+                    <OrderCard key={o.id} order={o} tick={tick}
+                      flash={false} canAct={canAct} dimmed
+                      onDismiss={()=>dismiss(o.id)}/>
                   ))}
                 </div>
               </div>
@@ -496,11 +680,11 @@ export default function KitchenDisplay({ onBack }) {
               <div>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:showCompleted?12:0}}>
                   <span style={{fontSize:11,fontWeight:800,color:"#64748b",letterSpacing:".08em"}}>
-                    COMPLETED / CANCELLED
+                    ✓ SERVED ORDERS
                   </span>
                   <span style={{background:"#64748b22",border:"1px solid #64748b40",color:"#94a3b8",
                                 borderRadius:10,padding:"1px 9px",fontSize:11,fontWeight:800}}>
-                    {allDone.length}
+                    {done.length}
                   </span>
                   <div style={{flex:1,height:1,background:"#1a2438"}}/>
                   {canAct&&allDone.length>0&&(
@@ -513,7 +697,7 @@ export default function KitchenDisplay({ onBack }) {
                   <button className="kv-btn" onClick={()=>setShowCompleted(s=>!s)}
                     style={{background:"#1e2d4a",border:"1px solid #2d3f5a",borderRadius:8,
                             padding:"5px 14px",color:"#94a3b8",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>
-                    {showCompleted?"▲ Hide":"▼ Show"} ({allDone.length})
+                    {showCompleted?"▲ Hide":"▼ Show"} ({done.length})
                   </button>
                 </div>
 
@@ -529,7 +713,7 @@ export default function KitchenDisplay({ onBack }) {
                 )}
                 {showCompleted&&done.length===0&&allDone.length>0&&(
                   <div style={{textAlign:"center",padding:"18px 0",fontSize:12,color:"#2a3a50"}}>
-                    No completed orders match the current filter
+                    No served orders match the current filter
                   </div>
                 )}
               </div>
@@ -568,6 +752,47 @@ export default function KitchenDisplay({ onBack }) {
           </div>
         </Modal>
       )}
+
+      {/* ══ PRIORITY MODAL ══ */}
+      {priModal&&(
+        <Modal onClose={()=>setPriorityModal(null)}>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:38,marginBottom:12}}>🏷</div>
+            <div style={{fontSize:17,fontWeight:800,color:"#e8edf5",marginBottom:8}}>
+              Change Priority
+            </div>
+            <div style={{fontSize:13,color:"#7d8fa0",lineHeight:1.6,marginBottom:18}}>
+              Set priority for order <span style={{color:"#f0a500",fontWeight:700,fontFamily:"'JetBrains Mono',monospace"}}>{priModal.orderNo}</span>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
+              {["Normal","Rush","VIP"].map(p=>{
+                const pcfg = PRIORITY_CFG[p];
+                const selected = priModal.current === p;
+                return (
+                  <button key={p} className="kv-btn"
+                    onClick={()=>setPriority(priModal.id, p)}
+                    style={{background:selected?pcfg.bg:"transparent",
+                            border:`1.5px solid ${selected?pcfg.col+"80":"#2d3f5a"}`,
+                            borderRadius:10,padding:"12px 16px",
+                            color:selected?pcfg.col:"#7d8fa0",
+                            fontSize:14,fontWeight:selected?800:700,fontFamily:"inherit",
+                            display:"flex",alignItems:"center",gap:10,justifyContent:"center"}}>
+                    <span style={{fontSize:16}}>{pcfg.icon||"—"}</span>
+                    <span>{pcfg.label}</span>
+                    {selected&&<span style={{marginLeft:"auto",fontSize:12}}>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <button className="kv-btn" onClick={()=>setPriorityModal(null)}
+              style={{width:"100%",background:"transparent",border:"1px solid #2d3f5a",
+                      borderRadius:10,padding:"11px 0",color:"#7d8fa0",
+                      fontSize:13,fontWeight:700,fontFamily:"inherit"}}>
+              Cancel
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -575,9 +800,8 @@ export default function KitchenDisplay({ onBack }) {
 /* ══════════════════════════════════════════════════════
    ORDER CARD
 ══════════════════════════════════════════════════════ */
-function OrderCard({ order, tick, flash, canAct, onAdvance, onCancel, onDismiss, onSetPriority, dimmed }) {
+function OrderCard({ order, tick, flash, canAct, onAdvance, onCancel, onDismiss, onSetPriority, onOpenPriorityModal, dimmed }) {
   const lang = useLang();
-  const [showPriMenu, setShowPriMenu] = useState(false);
   const cfg      = S_CFG[order.status] || S_CFG.New;
   const tcfg     = TYPE_CFG[order.type] || TYPE_CFG["dine-in"];
   const priority = order.priority || "Normal";
@@ -736,32 +960,15 @@ function OrderCard({ order, tick, flash, canAct, onAdvance, onCancel, onDismiss,
               {lang.t(cfg.btn) || cfg.btn}
             </button>
           )}
-          {/* Priority picker */}
-          <div style={{position:"relative"}}>
-            <button className="kv-btn" onClick={()=>setShowPriMenu(p=>!p)}
+          {/* Priority picker - opens modal */}
+          {onOpenPriorityModal && (
+            <button className="kv-btn" onClick={onOpenPriorityModal}
               style={{background:"#1e2d4a",border:"1px solid #2d3f5a",borderRadius:10,
                       padding:"11px 10px",color:"#94a3b8",fontSize:12,
                       fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>
               {priority==="Normal"?"🏷":"VIP"===priority?"⭐":"🔴"} {priority}
             </button>
-            {showPriMenu && (
-              <div style={{position:"absolute",bottom:"110%",right:0,
-                            background:"#0d1525",border:"1px solid #2d3f5a",
-                            borderRadius:10,padding:6,zIndex:100,minWidth:120,
-                            boxShadow:"0 10px 30px rgba(0,0,0,.5)"}}>
-                {["Normal","Rush","VIP"].map(p=>(
-                  <button key={p} className="kv-btn"
-                    onClick={()=>{onSetPriority(p);setShowPriMenu(false);}}
-                    style={{width:"100%",background:priority===p?PRIORITY_CFG[p].bg:"transparent",
-                            border:"none",borderRadius:7,padding:"7px 12px",
-                            color:PRIORITY_CFG[p].col,fontSize:12,fontWeight:700,
-                            fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:7}}>
-                    <span>{PRIORITY_CFG[p].icon||"—"}</span> {p}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
           {/* Cancel */}
           <button className="kv-btn" onClick={onCancel}
             style={{background:"#f8514912",border:"1px solid #f8514940",borderRadius:10,

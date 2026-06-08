@@ -3,7 +3,9 @@ import { useAuth, PERMISSIONS, ROLE_META, DEFAULT_USERS } from "../auth/AuthProv
 import { SettingsService } from "../db/services/settings.js";
 import { AuthService } from "../db/services/auth.js";
 import { useLang } from "../i18n/LanguageContext.jsx";
-import { TableService, TABLE_STATUSES, TABLE_STATUS_CFG } from "../db/services/tables.js";
+import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
+import { useTenant } from "../contexts/TenantProvider.jsx";
+import { hashPassword } from "../utils/password.js";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Settings Center  ·  v1.0
@@ -43,8 +45,12 @@ const PERM_LABELS = {
 // ══════════════════════════════════════════════════════
 export default function SettingsCenter({ onBack }) {
   const { user } = useAuth();
-
   const { t } = useLang();
+  
+  // Firebase integration
+  const firebaseServices = useFirebaseServices();
+  const { tenantId } = useTenant();
+  const useFirebase = !!tenantId && !!firebaseServices;
 
   const TABS = [
     { id:"business", icon:"🏢", label:t("settingsBusiness") },
@@ -53,7 +59,6 @@ export default function SettingsCenter({ onBack }) {
     { id:"receipt",  icon:"🖨", label:t("settingsReceipt")   },
     { id:"pos",      icon:"⚙",  label:t("settingsPOS")      },
     { id:"security", icon:"🔐", label:t("settingsSecurity")  },
-    { id:"tables",   icon:"🪑", label:"Tables"              },
   ];
 
   const PERM_LABELS = {
@@ -86,18 +91,32 @@ export default function SettingsCenter({ onBack }) {
 
   const load = useCallback(async () => {
     try {
-      const [settings, allUsers] = await Promise.all([
-        SettingsService.getAll(),
-        AuthService.getUsers(),
-      ]);
+      let allUsers;
+      let settings;
+      
+      if (useFirebase) {
+        console.log('Loading users and settings from Firebase...');
+        allUsers = await firebaseServices.users.getAll();
+        settings = await firebaseServices.settings.getAll();
+        console.log('Loaded from Firebase - Users:', allUsers, 'Settings:', settings);
+      } else {
+        console.log('Loading users and settings from localStorage...');
+        allUsers = await AuthService.getUsers();
+        settings = await SettingsService.getAll();
+        console.log('Loaded from localStorage - Users:', allUsers, 'Settings:', settings);
+      }
+      
       setAll(settings);
       setApp(settings.app || {});
       setCurrency(settings.currency || {});
       setReceipt(settings.receipt || {});
       setPos(settings.pos || {});
       setUsers(safeArr(allUsers));
-    } catch(e) { console.error(e); }
-  }, []);
+    } catch(e) { 
+      console.error('Error loading settings:', e); 
+      showToast("Failed to load settings: " + e.message, "err");
+    }
+  }, [useFirebase, firebaseServices]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -119,12 +138,28 @@ export default function SettingsCenter({ onBack }) {
         taxNumber:    app.taxNumber || receipt.taxNumber,
         website:      app.website || receipt.website,
       };
-      const old_ = all;
-      await SettingsService.saveAll({ app, receipt:receiptMerged, pos, currency });
+      
+      const settingsToSave = { 
+        app, 
+        receipt: receiptMerged, 
+        pos, 
+        currency 
+      };
+      
+      if (useFirebase) {
+        console.log('Saving settings to Firebase:', settingsToSave);
+        await firebaseServices.settings.saveAll(settingsToSave);
+        console.log('Settings saved to Firebase successfully');
+      } else {
+        console.log('Saving settings to localStorage:', settingsToSave);
+        await SettingsService.saveAll(settingsToSave);
+        console.log('Settings saved to localStorage successfully');
+      }
       
       setDirty(false);
       showToast("Settings saved");
     } catch(e) {
+      console.error('Error saving settings:', e);
       showToast("Save failed: " + (e.message||"error"), "err");
     }
     setSaving(false);
@@ -363,10 +398,7 @@ export default function SettingsCenter({ onBack }) {
 
             {/* ══════════ SECURITY ══════════ */}
             {tab === "security" && (
-              <SecurityPanel users={users} onRefresh={load} showToast={showToast}/>
-            )}
-            {tab === "tables" && (
-              <TablesPanel showToast={showToast}/>
+              <SecurityPanel users={users} onRefresh={load} showToast={showToast} firebaseServices={firebaseServices} useFirebase={useFirebase}/>
             )}
           </div>
         </div>
@@ -386,204 +418,7 @@ export default function SettingsCenter({ onBack }) {
    SECURITY PANEL — Users & Permissions
 ══════════════════════════════════════════════════════ */
 
-/* ══════════════════════════════════════════════════════
-   TABLES PANEL — restaurant table management
-══════════════════════════════════════════════════════ */
-function TablesPanel({ showToast }) {
-  const [tables,   setTables]  = useState([]);
-  const [form,     setForm]    = useState(null); // null = closed, {} = new, {...} = edit
-  const [saving,   setSaving]  = useState(false);
-  const [delId,    setDelId]   = useState(null);
-
-  const load = useCallback(() => {
-    TableService.seedIfEmpty();
-    const t = TableService.getAll();
-    setTables(t);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  function saveTable() {
-    if (!form.number?.trim()) { showToast("Table number required", "err"); return; }
-    setSaving(true);
-    try {
-      TableService.save(form);
-      showToast(form.id ? "Table updated" : "Table added");
-      setForm(null); load();
-    } catch(e) { showToast("Save failed", "err"); }
-    setSaving(false);
-  }
-
-  function deleteTable(id) {
-    TableService.delete(id);
-    setDelId(null); load();
-    showToast("Table deleted", "warn");
-  }
-
-  function cycleStatus(table) {
-    const cycle = ["Available","Occupied","Reserved","Cleaning"];
-    const next = cycle[(cycle.indexOf(table.status) + 1) % cycle.length];
-    TableService.setStatus(table.id, next);
-    load();
-  }
-
-  const setF = (k, v) => setForm(p => ({...p, [k]: v}));
-
-  return (
-    <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-        <div>
-          <div style={{ fontWeight:700, color:C.text, fontSize:14 }}>🪑 Restaurant Tables</div>
-          <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>
-            Manage floor tables — used in POS for dine-in orders
-          </div>
-        </div>
-        <button className="sc-btn" onClick={() => setForm({ number:"", label:"", capacity:4, status:"Available", active:true, notes:"" })}
-          style={{ background:C.acc, color:"#000", border:"none", borderRadius:8, padding:"7px 16px", fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
-          + Add Table
-        </button>
-      </div>
-
-      {/* Table grid */}
-      {tables.length === 0 ? (
-        <div style={{ textAlign:"center", padding:"40px 0", color:C.muted }}>
-          <div style={{ fontSize:32, marginBottom:8 }}>🪑</div>
-          <div>No tables yet. Click + Add Table to create floor plan.</div>
-        </div>
-      ) : (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:10, marginBottom:20 }}>
-          {tables.map(table => {
-            const cfg = TABLE_STATUS_CFG[table.status] || TABLE_STATUS_CFG.Available;
-            return (
-              <div key={table.id} style={{ background:cfg.bg, border:`1.5px solid ${cfg.col}40`,
-                                           borderRadius:12, padding:14,
-                                           opacity: table.active === false ? 0.45 : 1 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
-                  <div>
-                    <div style={{ fontWeight:900, color:C.acc, fontSize:20, fontFamily:"'JetBrains Mono',monospace" }}>
-                      {table.number}
-                    </div>
-                    {table.label && table.label !== table.number && (
-                      <div style={{ fontSize:10, color:C.muted }}>{table.label}</div>
-                    )}
-                    {table.capacity > 0 && (
-                      <div style={{ fontSize:10, color:C.muted }}>👥 {table.capacity}</div>
-                    )}
-                  </div>
-                  <button onClick={() => cycleStatus(table)}
-                    style={{ background:cfg.col+"20", border:`1px solid ${cfg.col}50`, color:cfg.col,
-                             borderRadius:20, padding:"3px 9px", fontSize:9, fontWeight:700,
-                             cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>
-                    {cfg.icon} {table.status}
-                  </button>
-                </div>
-                <div style={{ display:"flex", gap:6 }}>
-                  <button onClick={() => setForm({...table})} className="sc-btn"
-                    style={{ flex:1, background:"transparent", border:`1px solid ${C.bdr}`, borderRadius:7,
-                             padding:"5px 0", color:C.muted, fontSize:11, cursor:"pointer", fontFamily:"inherit" }}>
-                    ✏ Edit
-                  </button>
-                  <button onClick={() => setDelId(table.id)} className="sc-btn"
-                    style={{ background:"transparent", border:`1px solid ${C.danger}40`, borderRadius:7,
-                             padding:"5px 9px", color:C.danger, fontSize:11, cursor:"pointer", fontFamily:"inherit" }}>
-                    🗑
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Add/Edit modal */}
-      {form && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", display:"flex",
-                      alignItems:"center", justifyContent:"center", zIndex:9999, padding:20 }}>
-          <div style={{ background:C.surf, border:`1px solid ${C.bdr}`, borderRadius:14,
-                        padding:24, width:360, maxWidth:"96vw" }}>
-            <div style={{ fontWeight:800, color:C.text, fontSize:15, marginBottom:16 }}>
-              {form.id ? "✏ Edit Table" : "🆕 New Table"}
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
-              <div>
-                <FLabel>TABLE NUMBER *</FLabel>
-                <input value={form.number||""} onChange={e=>setF("number",e.target.value)}
-                  placeholder="1" autoFocus
-                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8,
-                           padding:"7px 10px", color:C.text, fontSize:14, fontFamily:"'JetBrains Mono',monospace",
-                           outline:"none", boxSizing:"border-box" }}/>
-              </div>
-              <div>
-                <FLabel>CAPACITY</FLabel>
-                <input type="number" min="1" max="50" value={form.capacity||""} onChange={e=>setF("capacity",+e.target.value)}
-                  placeholder="4"
-                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8,
-                           padding:"7px 10px", color:C.text, fontSize:13, fontFamily:"inherit",
-                           outline:"none", boxSizing:"border-box" }}/>
-              </div>
-            </div>
-            <div style={{ marginBottom:12 }}>
-              <FLabel>LABEL (optional)</FLabel>
-              <input value={form.label||""} onChange={e=>setF("label",e.target.value)}
-                placeholder="e.g. Window Seat, VIP Booth"
-                style={{ width:"100%", background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8,
-                         padding:"7px 10px", color:C.text, fontSize:13, fontFamily:"inherit",
-                         outline:"none", boxSizing:"border-box" }}/>
-            </div>
-            <div style={{ marginBottom:12 }}>
-              <FLabel>STATUS</FLabel>
-              <select value={form.status||"Available"} onChange={e=>setF("status",e.target.value)}
-                style={{ width:"100%", background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8,
-                         padding:"7px 10px", color:C.text, fontSize:13, fontFamily:"inherit" }}>
-                {Object.values(TABLE_STATUSES).map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
-              <input type="checkbox" id="tbl-active" checked={form.active!==false}
-                onChange={e=>setF("active",e.target.checked)}/>
-              <label htmlFor="tbl-active" style={{ fontSize:12, color:C.muted, cursor:"pointer" }}>Active (shown in POS)</label>
-            </div>
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={saveTable} disabled={saving}
-                style={{ flex:2, background:C.acc, color:"#000", border:"none", borderRadius:9,
-                         padding:"10px 0", fontWeight:800, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
-                {saving ? "Saving…" : "💾 Save"}
-              </button>
-              <button onClick={() => setForm(null)}
-                style={{ flex:1, background:"transparent", border:`1px solid ${C.bdr}`, borderRadius:9,
-                         padding:"10px 0", color:C.muted, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete confirm */}
-      {delId && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", display:"flex",
-                      alignItems:"center", justifyContent:"center", zIndex:9999 }}>
-          <div style={{ background:C.surf, border:`1px solid ${C.bdr}`, borderRadius:12,
-                        padding:22, maxWidth:320, width:"96vw", textAlign:"center" }}>
-            <div style={{ fontSize:32, marginBottom:8 }}>🗑</div>
-            <div style={{ fontWeight:700, color:C.text, marginBottom:6 }}>Delete this table?</div>
-            <div style={{ fontSize:12, color:C.muted, marginBottom:16 }}>This cannot be undone.</div>
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => deleteTable(delId)}
-                style={{ flex:1, background:C.danger, color:"#fff", border:"none", borderRadius:9,
-                         padding:"10px 0", fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Delete</button>
-              <button onClick={() => setDelId(null)}
-                style={{ flex:1, background:"transparent", border:`1px solid ${C.bdr}`, borderRadius:9,
-                         padding:"10px 0", color:C.muted, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SecurityPanel({ users, onRefresh, showToast }) {
+function SecurityPanel({ users, onRefresh, showToast, firebaseServices, useFirebase }) {
   const [modal,    setModal]    = useState(null);  // "editUser"|"addUser"|"permissions"
   const [selUser,  setSelUser]  = useState(null);
   const [delConfirm,setDelConfirm] = useState(null);
@@ -592,11 +427,21 @@ function SecurityPanel({ users, onRefresh, showToast }) {
   const handleDelete = async (u) => {
     if (u.id === "u1" || u.username === "admin") { showToast("Cannot delete the admin account","err"); return; }
     try {
-      await AuthService.deleteUser(u.id);
+      console.log('Deleting user:', u.id);
+      if (useFirebase) {
+        await firebaseServices.users.delete(u.id);
+        console.log('User deleted from Firebase');
+      } else {
+        await AuthService.deleteUser(u.id);
+        console.log('User deleted from localStorage');
+      }
       
       onRefresh();
       showToast("User deleted","warn");
-    } catch(e) { showToast("Delete failed","err"); }
+    } catch(e) { 
+      console.error('Error deleting user:', e);
+      showToast("Delete failed","err"); 
+    }
     setDelConfirm(null);
   };
 
@@ -697,12 +542,30 @@ function SecurityPanel({ users, onRefresh, showToast }) {
           user={selUser}
           onSave={async (data) => {
             try {
-              await AuthService.saveUser(data);
-              if(selUser){  } else {  }
+              // Check for duplicate username
+              const duplicate = users.find(u => 
+                u.username?.toLowerCase() === data.username?.toLowerCase() && u.id !== data.id
+              );
+              if (duplicate) { 
+                showToast("Username already exists", "err"); 
+                return; 
+              }
+              
+              console.log('Saving user:', data);
+              if (useFirebase) {
+                await firebaseServices.users.save(data);
+                console.log('User saved to Firebase');
+              } else {
+                await AuthService.saveUser(data);
+                console.log('User saved to localStorage');
+              }
               await onRefresh();
               setModal(null);
               showToast(selUser ? "User updated" : "User created");
-            } catch(e) { showToast("Save failed: " + e.message, "err"); }
+            } catch(e) { 
+              console.error('Error saving user:', e);
+              showToast("Save failed: " + e.message, "err"); 
+            }
           }}
           onClose={() => setModal(null)}/>
       )}
@@ -734,18 +597,26 @@ function UserFormModal({ user, onSave, onClose }) {
   const [role,     setRole]    = useState(user?.role     || "cashier");
   const [showPwd,  setShowPwd] = useState(false);
 
-  const save = () => {
+  const save = async () => {
     if (!name.trim())     { alert("Name required"); return; }
     if (!username.trim()) { alert("Username required"); return; }
     if (!user && !password) { alert("Password required for new user"); return; }
+    
     const data = {
       id:       user?.id || `u_${Date.now()}`,
       name:     name.trim(),
       username: username.trim().toLowerCase(),
       role,
-      password: password || user?.password,
     };
-    onSave(data);
+    
+    // Hash password if provided
+    if (password) {
+      data.password = await hashPassword(password);
+    } else if (user?.password) {
+      data.password = user.password;
+    }
+    
+    await onSave(data);
   };
 
   return (

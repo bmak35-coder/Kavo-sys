@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { MenuService, ModifierService, SEED_MODIFIER_GROUPS } from "../db/services/menu.js";
 import { RecipeService } from "../db/services/inventory.js";
+import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
+import { useTenant } from "../contexts/TenantProvider.jsx";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Menu Management  ·  v1.0
@@ -48,9 +50,14 @@ const CAT_ICONS = ["☕","🧋","🍔","🍰","⭐","🌮","🍕","🥗","🍷",
 // ══════════════════════════════════════════════════════
 //   MAIN COMPONENT
 // ══════════════════════════════════════════════════════
-export default function MenuManagement({ onBack }) {
+export default function MenuManagement({ onBack, onNavigate }) {
   const { user } = useAuth();
   const sym = "$";
+  
+  // Firebase integration
+  const firebaseServices = useFirebaseServices();
+  const { tenantId } = useTenant();
+  const useFirebase = !!tenantId && !!firebaseServices;
 
   const [tab,       setTab]       = useState("items");
   const [items,     setItems]     = useState([]);
@@ -74,17 +81,41 @@ export default function MenuManagement({ onBack }) {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [allItems, allCats, allMods] = await Promise.all([
-        MenuService.getAll(),
-        MenuService.getCategories(),
-        ModifierService.getAll(),
-      ]);
-      setItems(safeArr(allItems));
-      setCats(safeArr(allCats));
-      setModGroups(safeArr(allMods));
-    } catch(e) { console.error(e); }
+      if (useFirebase) {
+        // Use Firebase services
+        console.log('Loading menu data from Firebase...');
+        const [allItems, allCats, allMods] = await Promise.all([
+          firebaseServices.menu.getAll(),
+          firebaseServices.menu.getCategories(),
+          firebaseServices.menu.getModifierGroups(),
+        ]);
+        console.log('Loaded items:', allItems);
+        console.log('Loaded categories:', allCats);
+        console.log('Loaded modifier groups:', allMods);
+        setItems(safeArr(allItems));
+        setCats(safeArr(allCats));
+        setModGroups(safeArr(allMods));
+      } else {
+        // Fallback to local IndexedDB
+        console.log('Loading menu data from IndexedDB...');
+        const [allItems, allCats, allMods] = await Promise.all([
+          MenuService.getAll(),
+          MenuService.getCategories(),
+          ModifierService.getAll(),
+        ]);
+        console.log('Loaded items:', allItems);
+        console.log('Loaded categories:', allCats);
+        console.log('Loaded modifier groups:', allMods);
+        setItems(safeArr(allItems));
+        setCats(safeArr(allCats));
+        setModGroups(safeArr(allMods));
+      }
+    } catch(e) { 
+      console.error('Error loading menu data:', e);
+      showToast('Error loading data', 'error');
+    }
     setLoading(false);
-  }, []);
+  }, [useFirebase, firebaseServices]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -138,10 +169,23 @@ export default function MenuManagement({ onBack }) {
 
   // ── Quick toggles ──────────────────────────────────
   const quickToggle = async (id, field) => {
-    if (field === "active")     await MenuService.toggleActive(id);
-    if (field === "outOfStock") await MenuService.toggleOutOfStock(id);
-    if (field === "favorite")   await MenuService.toggleFavorite(id);
-    reload();
+    try {
+      if (useFirebase) {
+        // Use Firebase services
+        if (field === "active")     await firebaseServices.menu.toggleActive(id);
+        if (field === "outOfStock") await firebaseServices.menu.toggleOutOfStock(id);
+        if (field === "favorite")   await firebaseServices.menu.toggleFavorite(id);
+      } else {
+        // Use local services
+        if (field === "active")     await MenuService.toggleActive(id);
+        if (field === "outOfStock") await MenuService.toggleOutOfStock(id);
+        if (field === "favorite")   await MenuService.toggleFavorite(id);
+      }
+      reload();
+    } catch(e) {
+      console.error('Error toggling field:', e);
+      showToast('Error updating item', 'error');
+    }
   };
 
   return (
@@ -172,28 +216,28 @@ export default function MenuManagement({ onBack }) {
         <span style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:900, fontSize:17, color:C.acc, letterSpacing:"0.07em" }}>KAVO<span style={{color:C.text,opacity:0.3}}>-SYS</span></span>
         <span style={{ fontSize:10, fontWeight:800, color:C.muted, letterSpacing:"0.1em" }}>MENU MANAGER</span>
 
-        <div style={{ display:"flex", gap:3, marginLeft:6 }}>
-          {TABS.map(t => (
-            <button key={t.id} className="mm-tab mm-btn" onClick={() => setTab(t.id)}
-              style={{ background:tab===t.id?C.acc+"22":"transparent", border:`1px solid ${tab===t.id?C.acc+"60":C.bdr}`, color:tab===t.id?C.acc:C.muted, borderRadius:8, padding:"5px 12px", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:"inherit", transition:"all 0.14s" }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
+          <div style={{ display:"flex", gap:3, marginLeft:6 }}>
+            {TABS.map(t => (
+              <button key={t.id} className="mm-tab mm-btn" onClick={() => setTab(t.id)}
+                style={{ background:tab===t.id?C.acc+"22":"transparent", border:`1px solid ${tab===t.id?C.acc+"60":C.bdr}`, color:tab===t.id?C.acc:C.muted, borderRadius:8, padding:"5px 12px", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:"inherit", transition:"all 0.14s" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-        <div style={{ flex:1 }}/>
-        <div style={{ display:"flex", gap:7, alignItems:"center" }}>
-          {tab==="items" && (
-            <button className="mm-btn" onClick={() => { setSelItem(null); setModal("editItem"); }} style={Btn(C.acc)}>+ New Item</button>
-          )}
-          {tab==="categories" && (
-            <button className="mm-btn" onClick={() => { setSelCat(null); setModal("editCat"); }} style={Btn(C.acc)}>+ New Category</button>
-          )}
-          {tab==="modifiers" && (
-            <button className="mm-btn" onClick={() => { setSelMod(null); setModal("editMod"); }} style={Btn(C.acc)}>+ New Group</button>
-          )}
-        </div>
-      </header>
+          <div style={{ flex:1 }}/>
+          <div style={{ display:"flex", gap:7, alignItems:"center" }}>
+            {tab==="items" && (
+              <button className="mm-btn" onClick={() => { setSelItem(null); setModal("editItem"); }} style={Btn(C.acc)}>+ New Item</button>
+            )}
+            {tab==="categories" && (
+              <button className="mm-btn" onClick={() => { setSelCat(null); setModal("editCat"); }} style={Btn(C.acc)}>+ New Category</button>
+            )}
+            {tab==="modifiers" && (
+              <button className="mm-btn" onClick={() => { setSelMod(null); setModal("editMod"); }} style={Btn(C.acc)}>+ New Group</button>
+            )}
+          </div>
+        </header>
 
       {/* ═══ CONTENT ═══ */}
       <div style={{ flex:1, overflowY:"auto", overflowX:"hidden", padding:14, paddingBottom:80 }}>
@@ -308,7 +352,22 @@ export default function MenuManagement({ onBack }) {
                             <button className="mm-btn" onClick={() => quickToggle(item.id,"favorite")} style={{ ...Ghost(item.favorite?C.warn:C.muted,true), fontSize:13, padding:"4px 7px" }} title={item.favorite?"Unmark favorite":"Mark as favorite"}>
                               {item.favorite?"⭐":"☆"}
                             </button>
-                            <button className="mm-btn" onClick={() => { if(window.confirm(`Delete "${item.name}"?`)) MenuService.delete(item.id).then(() => {  reload(); showToast("Item deleted","warn"); }); }} style={{ ...Ghost(C.danger,true), fontSize:13, padding:"4px 7px" }}>🗑</button>
+                            <button className="mm-btn" onClick={async () => { 
+                              if(window.confirm(`Delete "${item.name}"?`)) {
+                                try {
+                                  if (useFirebase) {
+                                    await firebaseServices.menu.delete(item.id);
+                                  } else {
+                                    await MenuService.delete(item.id);
+                                  }
+                                  reload(); 
+                                  showToast("Item deleted","warn");
+                                } catch(e) {
+                                  console.error('Error deleting item:', e);
+                                  showToast('Error deleting item', 'error');
+                                }
+                              }
+                            }} style={{ ...Ghost(C.danger,true), fontSize:13, padding:"4px 7px" }}>🗑</button>
                           </div>
                         </div>
                       );
@@ -330,7 +389,22 @@ export default function MenuManagement({ onBack }) {
                           <div style={{ fontSize:32 }}>{c.icon||"📂"}</div>
                           <div style={{ display:"flex", gap:5 }}>
                             <button className="mm-btn" onClick={() => { setSelCat(c); setModal("editCat"); }} style={Ghost(C.info,true)}>✏</button>
-                            <button className="mm-btn" onClick={() => { if(window.confirm(`Delete category "${c.name}"?`)) MenuService.deleteCategory(c.id).then(() => { reload(); showToast("Category deleted","warn"); }); }} style={Ghost(C.danger,true)}>🗑</button>
+                            <button className="mm-btn" onClick={async () => { 
+                              if(window.confirm(`Delete category "${c.name}"?`)) {
+                                try {
+                                  if (useFirebase) {
+                                    await firebaseServices.menu.deleteCategory(c.id);
+                                  } else {
+                                    await MenuService.deleteCategory(c.id);
+                                  }
+                                  reload(); 
+                                  showToast("Category deleted","warn");
+                                } catch(e) {
+                                  console.error('Error deleting category:', e);
+                                  showToast('Error deleting category', 'error');
+                                }
+                              }
+                            }} style={Ghost(C.danger,true)}>🗑</button>
                           </div>
                         </div>
                         <div style={{ fontWeight:800, color:C.text, fontSize:14, marginBottom:3 }}>{c.name}</div>
@@ -368,7 +442,22 @@ export default function MenuManagement({ onBack }) {
                         </div>
                         <div style={{ display:"flex", gap:5 }}>
                           <button className="mm-btn" onClick={() => { setSelMod(mg); setModal("editMod"); }} style={Ghost(C.info,true)}>✏</button>
-                          <button className="mm-btn" onClick={() => { if(window.confirm(`Delete "${mg.name}"?`)) ModifierService.delete(mg.id).then(() => { reload(); showToast("Group deleted","warn"); }); }} style={Ghost(C.danger,true)}>🗑</button>
+                          <button className="mm-btn" onClick={async () => { 
+                            if(window.confirm(`Delete "${mg.name}"?`)) {
+                              try {
+                                if (useFirebase) {
+                                  await firebaseServices.menu.deleteModifierGroup(mg.id);
+                                } else {
+                                  await ModifierService.delete(mg.id);
+                                }
+                                reload(); 
+                                showToast("Group deleted","warn");
+                              } catch(e) {
+                                console.error('Error deleting modifier group:', e);
+                                showToast('Error deleting group', 'error');
+                              }
+                            }
+                          }} style={Ghost(C.danger,true)}>🗑</button>
                         </div>
                       </div>
                       <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
@@ -394,11 +483,22 @@ export default function MenuManagement({ onBack }) {
           item={selItem} cats={cats} modGroups={modGroups} sym={sym}
           getCost={getCost} getMargin={getMargin}
           onSave={async (data) => {
-            const prev_ = selItem;
-          const saved_ = await MenuService.save(data);
-          if(prev_) {  } else {  }
-            reload(); setModal(null);
-            showToast(selItem ? "Item updated" : "Item created");
+            try {
+              const prev_ = selItem;
+              console.log('Saving menu item:', data);
+              if (useFirebase) {
+                const saved = await firebaseServices.menu.save(data);
+                console.log('Item saved to Firebase:', saved);
+              } else {
+                const saved = await MenuService.save(data);
+                console.log('Item saved to IndexedDB:', saved);
+              }
+              reload(); setModal(null);
+              showToast(selItem ? "Item updated" : "Item created");
+            } catch(e) {
+              console.error('Error saving item:', e);
+              showToast('Error saving item', 'error');
+            }
           }}
           onClose={() => setModal(null)}/>
       )}
@@ -406,9 +506,21 @@ export default function MenuManagement({ onBack }) {
         <CategoryFormModal
           cat={selCat}
           onSave={async (data) => {
-            await MenuService.saveCategory({...selCat,...data});
-            reload(); setModal(null);
-            showToast(selCat ? "Category updated" : "Category created");
+            try {
+              console.log('Saving category:', {...selCat,...data});
+              if (useFirebase) {
+                const saved = await firebaseServices.menu.saveCategory({...selCat,...data});
+                console.log('Category saved to Firebase:', saved);
+              } else {
+                const saved = await MenuService.saveCategory({...selCat,...data});
+                console.log('Category saved to IndexedDB:', saved);
+              }
+              reload(); setModal(null);
+              showToast(selCat ? "Category updated" : "Category created");
+            } catch(e) {
+              console.error('Error saving category:', e);
+              showToast('Error saving category', 'error');
+            }
           }}
           onClose={() => setModal(null)}/>
       )}
@@ -416,9 +528,18 @@ export default function MenuManagement({ onBack }) {
         <ModifierGroupModal
           group={selMod} sym={sym}
           onSave={async (data) => {
-            await ModifierService.save({...selMod,...data});
-            reload(); setModal(null);
-            showToast(selMod ? "Modifier group updated" : "Group created");
+            try {
+              if (useFirebase) {
+                await firebaseServices.menu.saveModifierGroup({...selMod,...data});
+              } else {
+                await ModifierService.save({...selMod,...data});
+              }
+              reload(); setModal(null);
+              showToast(selMod ? "Modifier group updated" : "Group created");
+            } catch(e) {
+              console.error('Error saving modifier group:', e);
+              showToast('Error saving modifier group', 'error');
+            }
           }}
           onClose={() => setModal(null)}/>
       )}
@@ -495,6 +616,11 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
       {/* ── BASIC TAB ── */}
       {activeTab === "basic" && (
         <div>
+          {cats.filter(c=>c.id!=="all").length === 0 && (
+            <div style={{ background:C.warn+"18", border:`1px solid ${C.warn}60`, borderRadius:8, padding:"10px 14px", marginBottom:14, fontSize:12, color:C.warn }}>
+              ⚠️ No categories available. Go to the <strong>Categories</strong> tab to create one first.
+            </div>
+          )}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <div>
               <FLabel>ITEM NAME *</FLabel>
@@ -503,7 +629,11 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
             <div>
               <FLabel>CATEGORY</FLabel>
               <select value={f.cat} onChange={e=>set("cat",e.target.value)} style={Sel}>
-                {cats.filter(c=>c.id!=="all").map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                {cats.filter(c=>c.id!=="all").length === 0 ? (
+                  <option value="">No categories - create one first</option>
+                ) : (
+                  cats.filter(c=>c.id!=="all").map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)
+                )}
               </select>
             </div>
             <div>

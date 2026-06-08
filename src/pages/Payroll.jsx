@@ -5,6 +5,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useLang } from "../i18n/LanguageContext.jsx";
+import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
+import { useTenant } from "../contexts/TenantProvider.jsx";
 import {
   EmployeeService, AdvanceService, PayrollService,
   yearMonth, monthLabel,
@@ -236,6 +238,11 @@ function AdvanceModal({ employees, preselected, onSave, onClose }) {
 export default function Payroll({ onBack }) {
   const { user, can } = useAuth();
   const { t } = useLang();
+  
+  // Firebase integration
+  const firebaseServices = useFirebaseServices();
+  const { tenantId } = useTenant();
+  const useFirebase = !!tenantId && !!firebaseServices;
 
   const [month,       setMonth]       = useState(currentMonth());
   const [payroll,     setPayroll]     = useState({ rows:[], summary:{}, month:"" });
@@ -256,46 +263,109 @@ export default function Payroll({ onBack }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [pr, emps] = await Promise.all([
-        PayrollService.getMonthlyPayroll(month),
-        EmployeeService.getActive(),
-      ]);
+      let pr, emps;
+      
+      if (useFirebase) {
+        console.log('Loading payroll from Firebase...');
+        [pr, emps] = await Promise.all([
+          firebaseServices.payroll.getMonthlyPayroll(month),
+          firebaseServices.employees.getActive(),
+        ]);
+        console.log('Loaded from Firebase - Payroll:', pr, 'Employees:', emps);
+      } else {
+        console.log('Loading payroll from localStorage...');
+        [pr, emps] = await Promise.all([
+          PayrollService.getMonthlyPayroll(month),
+          EmployeeService.getActive(),
+        ]);
+        console.log('Loaded from localStorage - Payroll:', pr, 'Employees:', emps);
+      }
+      
       setPayroll(pr);
       setActiveEmps(emps);
     } catch(e) {
+      console.error('Error loading payroll:', e);
       showToast("Load failed: " + e.message, "err");
     }
     setLoading(false);
-  }, [month]);
+  }, [month, useFirebase, firebaseServices]);
 
   useEffect(() => { load(); }, [load]);
 
   async function saveEmployee(data) {
-    await EmployeeService.save(data);
-    setEmpModal(null);
-    showToast(data.id ? "Employee updated" : "Employee added");
-    load();
+    try {
+      console.log('Saving employee:', data);
+      if (useFirebase) {
+        await firebaseServices.employees.save(data);
+        console.log('Employee saved to Firebase');
+      } else {
+        await EmployeeService.save(data);
+        console.log('Employee saved to localStorage');
+      }
+      setEmpModal(null);
+      showToast(data.id ? "Employee updated" : "Employee added");
+      load();
+    } catch(e) {
+      console.error('Error saving employee:', e);
+      showToast("Save failed: " + e.message, "err");
+    }
   }
 
   async function saveAdvance(data) {
-    await AdvanceService.save(data);
-    setAdvModal(null);
-    showToast("Advance recorded");
-    load();
+    try {
+      console.log('Saving advance:', data);
+      if (useFirebase) {
+        await firebaseServices.advances.save(data);
+        console.log('Advance saved to Firebase');
+      } else {
+        await AdvanceService.save(data);
+        console.log('Advance saved to localStorage');
+      }
+      setAdvModal(null);
+      showToast("Advance recorded");
+      load();
+    } catch(e) {
+      console.error('Error saving advance:', e);
+      showToast("Save failed: " + e.message, "err");
+    }
   }
 
   async function deleteEmployee(id) {
-    await EmployeeService.delete(id);
-    setDelEmpId(null);
-    showToast("Employee deleted", "warn");
-    load();
+    try {
+      console.log('Deleting employee:', id);
+      if (useFirebase) {
+        await firebaseServices.employees.delete(id);
+        console.log('Employee deleted from Firebase');
+      } else {
+        await EmployeeService.delete(id);
+        console.log('Employee deleted from localStorage');
+      }
+      setDelEmpId(null);
+      showToast("Employee deleted", "warn");
+      load();
+    } catch(e) {
+      console.error('Error deleting employee:', e);
+      showToast("Delete failed: " + e.message, "err");
+    }
   }
 
   async function deleteAdvance(id) {
-    await AdvanceService.delete(id);
-    setDelAdvId(null);
-    showToast("Advance deleted", "warn");
-    load();
+    try {
+      console.log('Deleting advance:', id);
+      if (useFirebase) {
+        await firebaseServices.advances.delete(id);
+        console.log('Advance deleted from Firebase');
+      } else {
+        await AdvanceService.delete(id);
+        console.log('Advance deleted from localStorage');
+      }
+      setDelAdvId(null);
+      showToast("Advance deleted", "warn");
+      load();
+    } catch(e) {
+      console.error('Error deleting advance:', e);
+      showToast("Delete failed: " + e.message, "err");
+    }
   }
 
   function downloadCSV(content, filename) {

@@ -1,5 +1,6 @@
 import { db, safeDB } from "../db.js";
 import { DEFAULT_USERS } from "../../auth/authConstants.js";
+import { verifyPassword } from "../../utils/password.js";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Auth Service  ·  IndexedDB-backed
@@ -55,12 +56,30 @@ export const AuthService = {
         }
       }
 
+      // Find user by username
       const found = users.find(u =>
         typeof u.username === "string" &&
-        u.username.toLowerCase() === String(username).toLowerCase().trim() &&
-        u.password === password
+        u.username.toLowerCase() === String(username).toLowerCase().trim()
       );
+      
       if (!found) return { success: false, error: "Invalid username or password" };
+      
+      // Verify password - support both plain text and hashed passwords
+      let passwordMatch = false;
+      if (found.password === password) {
+        // Plain text password match (legacy users or defaults)
+        passwordMatch = true;
+      } else if (found.password && found.password.includes(':')) {
+        // Try PBKDF2 verification (hashed passwords have format "salt:hash")
+        try {
+          passwordMatch = await verifyPassword(password, found.password);
+        } catch (e) {
+          console.error('Password verification error:', e);
+          passwordMatch = false;
+        }
+      }
+      
+      if (!passwordMatch) return { success: false, error: "Invalid username or password" };
 
       const session = {
         id:       found.id,

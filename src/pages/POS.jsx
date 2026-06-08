@@ -13,15 +13,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth, ROLE_META } from "../auth/AuthProvider";
-import { OrderService, HeldOrderService } from "../db/services/orders.js";
-import { KitchenService }                 from "../db/services/kitchen.js";
-import { MenuService }                    from "../db/services/menu.js";
-import { SettingsService }               from "../db/services/settings.js";
+import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
 import { useLang, LangSwitcher }         from "../i18n/LanguageContext.jsx";
-import { ReceiptService }                from "../db/services/receipts.js";
-import { InventoryService }              from "../db/services/inventory.js";
-import { TableService }                  from "../db/services/tables.js";
 import { useActiveShift }                from "../hooks/useActiveShift.js";
+import { InventoryService }              from "../db/services/inventory.js";
 
 /* ─────────────────────────────────────────────────────────────────────
    HELPERS — all `function` declarations so they are hoisted.
@@ -115,39 +110,18 @@ function inputStyle(w) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   SEED DATA (fallback if IndexedDB is empty)
+   CONFIGURATION
 ───────────────────────────────────────────────────────────────────── */
-var SEED_CATS = [
-  {id:"all",name:"All",icon:"🍽"},{id:"hot",name:"Hot Drinks",icon:"☕"},
-  {id:"cold",name:"Cold Drinks",icon:"🧋"},{id:"food",name:"Food",icon:"🍔"},
-  {id:"desserts",name:"Desserts",icon:"🍰"},{id:"specials",name:"Star Pick",icon:"⭐"},
-];
-var SEED_MENU = [
-  {id:"m1",cat:"hot",name:"Espresso",    price:3.50,bg:"#7c3aed",em:"☕"},
-  {id:"m2",cat:"hot",name:"Cappuccino",  price:4.50,bg:"#92400e",em:"☕"},
-  {id:"m3",cat:"hot",name:"Latte",       price:5.00,bg:"#78716c",em:"🥛"},
-  {id:"m4",cat:"hot",name:"Americano",   price:4.00,bg:"#1c1917",em:"☕"},
-  {id:"m5",cat:"hot",name:"Hot Chocolate",price:5.50,bg:"#78350f",em:"🍫"},
-  {id:"m6",cat:"cold",name:"Iced Latte", price:5.50,bg:"#0c4a6e",em:"🧋"},
-  {id:"m7",cat:"cold",name:"Frappuccino",price:6.00,bg:"#1e3a5f",em:"🥤"},
-  {id:"m8",cat:"cold",name:"Fresh OJ",   price:4.50,bg:"#c2410c",em:"🍊"},
-  {id:"m9",cat:"cold",name:"Lemonade",   price:4.00,bg:"#713f12",em:"🍋"},
-  {id:"m10",cat:"food",name:"Club Sandwich",price:8.50,bg:"#92400e",em:"🥪"},
-  {id:"m11",cat:"food",name:"Caesar Salad", price:7.50,bg:"#14532d",em:"🥗"},
-  {id:"m12",cat:"food",name:"Beef Burger",  price:12.0,bg:"#7f1d1d",em:"🍔"},
-  {id:"m13",cat:"desserts",name:"Cheesecake",price:6.00,bg:"#9d174d",em:"🍰"},
-  {id:"m14",cat:"desserts",name:"Tiramisu",  price:6.50,bg:"#44403c",em:"🍮"},
-  {id:"m15",cat:"specials",name:"Chef Special",price:15.0,bg:"#1e1b4b",em:"⭐"},
-];
 var DEFAULT_SETTINGS = { taxRate:11, serviceRate:10, currency:"$", cashier:"Cashier", branch:"KAVO", shift:"SHF-001" };
 
 /* ─────────────────────────────────────────────────────────────────────
    MAIN COMPONENT
 ───────────────────────────────────────────────────────────────────── */
-export default function POS({ onNavigate }) {
+export default function POS({ onNavigate, tenant, currentScreen }) {
   if (!onNavigate) onNavigate = function() {};
 
   var { user, logout, can } = useAuth();
+  var firebaseServices = useFirebaseServices(); // Get Firebase services for this tenant
   var lang = useLang();  // use lang.t() to avoid shadowing by loop vars named "t"
 
   // ── Safe translation helper (never throws, falls back to English) ──
@@ -164,13 +138,15 @@ export default function POS({ onNavigate }) {
   var { activeShift } = useActiveShift();
   var sym = "$";
 
-  // ── Settings (loaded from IDB async) ──
+  // ── Settings (loaded from Firestore async) ──
   var [settings, setSettings] = useState(DEFAULT_SETTINGS);
   useEffect(function() {
-    SettingsService.getAppSettings().then(function(s) {
-      if (s) setSettings(Object.assign({}, DEFAULT_SETTINGS, s));
-    }).catch(function() {});
-  }, []);
+    if (firebaseServices && firebaseServices.settings) {
+      firebaseServices.settings.getAll().then(function(s) {
+        if (s) setSettings(Object.assign({}, DEFAULT_SETTINGS, s));
+      }).catch(function() {});
+    }
+  }, [firebaseServices]);
 
   // ── Tables (for dine-in table picker) ──
   var [tables, setTables]           = useState([]);
@@ -179,25 +155,49 @@ export default function POS({ onNavigate }) {
   var [tableConflict, setTableConflict]   = useState(null);
 
   useEffect(function() {
-    try { TableService.seedIfEmpty(); const t = TableService.getActive(); if (t.length > 0) setTables(t); } catch(_) {}
-  }, []);
+    if (firebaseServices && firebaseServices.tables) {
+      firebaseServices.tables.getAll().then(function(t) {
+        if (t && t.length > 0) setTables(t);
+      }).catch(function(err) {
+        console.error('Error loading tables:', err);
+      });
+    }
+  }, [firebaseServices]);
 
   // ── Menu + categories ──
-  var [menu, setMenu]         = useState(SEED_MENU);
-  var [categories, setCategories] = useState(SEED_CATS);
+  var [menu, setMenu]         = useState([]);
+  var [categories, setCategories] = useState([{id:"all",name:"All",icon:"🍽"}]);
   var [activeCat, setActiveCat]   = useState("all");
   var [menuSearch, setMenuSearch] = useState("");
 
   useEffect(function() {
-    MenuService.getAll().then(function(items) {
-      if (Array.isArray(items) && items.length > 0) {
-        setMenu(items.filter(function(i) { return i.active !== false && !i.outOfStock; }));
-      }
-    }).catch(function() {});
-    MenuService.getCategories().then(function(cats) {
-      if (Array.isArray(cats) && cats.length > 0) setCategories(cats);
-    }).catch(function() {});
-  }, []);
+    if (firebaseServices && firebaseServices.menu) {
+      firebaseServices.menu.getAll().then(function(items) {
+        console.log('Loaded menu items from Firebase:', items);
+        if (Array.isArray(items) && items.length > 0) {
+          var activeItems = items.filter(function(i) { return i.active !== false && !i.outOfStock; });
+          console.log('Active menu items:', activeItems);
+          setMenu(activeItems);
+        } else {
+          console.log('No menu items found or empty array');
+          setMenu([]);
+        }
+      }).catch(function(err) {
+        console.error('Error loading menu:', err);
+      });
+      
+      firebaseServices.menu.getCategories().then(function(cats) {
+        console.log('Loaded categories from Firebase:', cats);
+        if (Array.isArray(cats) && cats.length > 0) {
+          // Add "All" category at the beginning
+          var allCats = [{id:"all",name:"All",icon:"🍽"}].concat(cats);
+          setCategories(allCats);
+        }
+      }).catch(function(err) {
+        console.error('Error loading categories:', err);
+      });
+    }
+  }, [firebaseServices]);
 
   // ── Order state ──
   var [orderNo, setOrderNo]   = useState(genNo);
@@ -222,16 +222,23 @@ export default function POS({ onNavigate }) {
   var [toast, setToast]         = useState(null);
   var [ticker, setTicker]       = useState(clock);
 
-  // ── History from IDB ──
+  // ── History from Firestore ──
   var [history, setHistory] = useState([]);
   useEffect(function() {
-    OrderService.getAll().then(function(o) {
-      if (Array.isArray(o) && o.length > 0) setHistory(o);
-    }).catch(function() {});
-    HeldOrderService.getAll().then(function(h) {
-      if (Array.isArray(h) && h.length > 0) setHeld(h);
-    }).catch(function() {});
-  }, []);
+    if (firebaseServices && firebaseServices.orders && firebaseServices.heldOrders) {
+      firebaseServices.orders.getAll().then(function(o) {
+        if (Array.isArray(o) && o.length > 0) setHistory(o);
+      }).catch(function(err) {
+        console.error('Error loading orders:', err);
+      });
+      
+      firebaseServices.heldOrders.getAll().then(function(h) {
+        if (Array.isArray(h) && h.length > 0) setHeld(h);
+      }).catch(function(err) {
+        console.error('Error loading held orders:', err);
+      });
+    }
+  }, [firebaseServices]);
 
   // ── Clock tick ──
   useEffect(function() {
@@ -330,9 +337,13 @@ export default function POS({ onNavigate }) {
                cart: sanitizeCart(cart), discPct: discPct, status: status, heldAt: nowISO() };
     var upd = held.concat([o]);
     setHeld(upd); lsSet("kavo_held", upd);
-    HeldOrderService.save(o).catch(function() {});
+    if (firebaseServices && firebaseServices.heldOrders) {
+      firebaseServices.heldOrders.create(o).catch(function(err) { console.error('Error holding order:', err); });
+    }
     // Mark table Occupied when a dine-in order is held
-    if (type === "dine-in" && tableId) { try { TableService.occupy(tableId); } catch(_) {} }
+    if (type === "dine-in" && tableId && firebaseServices && firebaseServices.tables) {
+      firebaseServices.tables.updateStatus(tableId, 'occupied').catch(function(err) { console.error('Error updating table:', err); });
+    }
     showToast("Order " + orderNo + " held");
     resetOrder();
   }
@@ -343,13 +354,18 @@ export default function POS({ onNavigate }) {
     setCart(safeArr(h.cart)); setDiscPct(h.discPct || 0); setStatus(h.status || "New");
     var upd = held.filter(function(x) { return x.orderNo !== h.orderNo; });
     setHeld(upd); lsSet("kavo_held", upd);
-    HeldOrderService.delete(h.orderNo).catch(function() {});
+    if (firebaseServices && firebaseServices.heldOrders && h.id) {
+      firebaseServices.heldOrders.delete(h.id).catch(function(err) { console.error('Error deleting held order:', err); });
+    }
     setModal(null); showToast("Resumed " + h.orderNo);
   }
   function removeHeld(no) {
     var upd = held.filter(function(h) { return h.orderNo !== no; });
     setHeld(upd); lsSet("kavo_held", upd);
-    HeldOrderService.delete(no).catch(function() {});
+    var heldItem = held.find(function(h) { return h.orderNo === no; });
+    if (firebaseServices && firebaseServices.heldOrders && heldItem && heldItem.id) {
+      firebaseServices.heldOrders.delete(heldItem.id).catch(function(err) { console.error('Error deleting held order:', err); });
+    }
   }
 
   // ── Send to kitchen ──
@@ -360,28 +376,74 @@ export default function POS({ onNavigate }) {
       custPhone: custPhone, deliveryAddr: deliveryAddr, orderNotes: orderNotes,
       cart: sanitizeCart(cart), status: "New", priority: "Normal", sentAt: nowISO(), updatedAt: nowISO(),
     };
-    var queue = safeArr(lsGet("kavo_kitchen", []), []);
-    var existIdx = queue.findIndex(function(o) { return o.id === orderNo; });
-    if (existIdx >= 0) queue[existIdx] = kitchenOrder; else queue.unshift(kitchenOrder);
-    lsSet("kavo_kitchen", queue);
-    KitchenService.save(kitchenOrder).catch(function() {});
-    // Mark table Occupied as soon as order goes to kitchen
-    if (type === "dine-in" && tableId) { try { TableService.occupy(tableId); } catch(_) {} }
-    // Keep order in held[] so the table picker can find and resume it after kitchen workflow
-    // (status "Preparing" signals it's been sent — not a plain hold)
-    var openOrder = {
-      orderNo: orderNo, type: type, tableNo: tableNo, tableId: tableId,
-      custName: custName, custPhone: custPhone, deliveryAddr: deliveryAddr,
-      orderNotes: orderNotes, cart: sanitizeCart(cart),
-      discPct: discPct, status: "Preparing", heldAt: nowISO(),
-    };
-    var existHeldIdx = held.findIndex(function(h) { return h.orderNo === orderNo; });
-    var updHeld = existHeldIdx >= 0
-      ? held.map(function(h) { return h.orderNo === orderNo ? openOrder : h; })
-      : held.concat([openOrder]);
-    setHeld(updHeld); lsSet("kavo_held", updHeld);
-    HeldOrderService.save(openOrder).catch(function() {});
-    setStatus("Preparing"); setModal("kitchen"); showToast("Sent to kitchen", "ok");
+    
+    // Check if order already exists in Firebase before sending
+    if (firebaseServices && firebaseServices.kitchen) {
+      firebaseServices.kitchen.getByOrderNo(orderNo).then(function(existingOrder) {
+        if (existingOrder) {
+          showToast("Order already sent to kitchen", "err");
+          return;
+        }
+        // Order doesn't exist, send it to kitchen
+        return firebaseServices.kitchen.sendToKitchen(kitchenOrder);
+      }).then(function(result) {
+        if (!result) return; // Early return if order already existed
+        
+        // Update local storage
+        var queue = safeArr(lsGet("kavo_kitchen", []), []);
+        var existIdx = queue.findIndex(function(o) { return o.id === orderNo; });
+        if (existIdx >= 0) queue[existIdx] = kitchenOrder; else queue.unshift(kitchenOrder);
+        lsSet("kavo_kitchen", queue);
+        
+        // Mark table Occupied as soon as order goes to kitchen
+        if (type === "dine-in" && tableId && firebaseServices.tables) {
+          firebaseServices.tables.updateStatus(tableId, 'occupied').catch(function(err) { console.error('Error updating table:', err); });
+        }
+        
+        // Keep order in held[] so the table picker can find and resume it after kitchen workflow
+        // (status "Preparing" signals it's been sent — not a plain hold)
+        var openOrder = {
+          orderNo: orderNo, type: type, tableNo: tableNo, tableId: tableId,
+          custName: custName, custPhone: custPhone, deliveryAddr: deliveryAddr,
+          orderNotes: orderNotes, cart: sanitizeCart(cart),
+          discPct: discPct, status: "Preparing", heldAt: nowISO(),
+        };
+        var existHeldIdx = held.findIndex(function(h) { return h.orderNo === orderNo; });
+        var updHeld = existHeldIdx >= 0
+          ? held.map(function(h) { return h.orderNo === orderNo ? openOrder : h; })
+          : held.concat([openOrder]);
+        setHeld(updHeld); lsSet("kavo_held", updHeld);
+        
+        if (firebaseServices.heldOrders) {
+          firebaseServices.heldOrders.create(openOrder).catch(function(err) { console.error('Error saving held order:', err); });
+        }
+        
+        setStatus("Preparing"); setModal("kitchen"); showToast("Sent to kitchen", "ok");
+      }).catch(function(err) { 
+        console.error('Error sending to kitchen:', err);
+        showToast("Failed to send to kitchen", "err");
+      });
+    } else {
+      // Local mode (no Firebase) - just update localStorage
+      var queue = safeArr(lsGet("kavo_kitchen", []), []);
+      var existIdx = queue.findIndex(function(o) { return o.id === orderNo; });
+      if (existIdx >= 0) queue[existIdx] = kitchenOrder; else queue.unshift(kitchenOrder);
+      lsSet("kavo_kitchen", queue);
+      
+      var openOrder = {
+        orderNo: orderNo, type: type, tableNo: tableNo, tableId: tableId,
+        custName: custName, custPhone: custPhone, deliveryAddr: deliveryAddr,
+        orderNotes: orderNotes, cart: sanitizeCart(cart),
+        discPct: discPct, status: "Preparing", heldAt: nowISO(),
+      };
+      var existHeldIdx = held.findIndex(function(h) { return h.orderNo === orderNo; });
+      var updHeld = existHeldIdx >= 0
+        ? held.map(function(h) { return h.orderNo === orderNo ? openOrder : h; })
+        : held.concat([openOrder]);
+      setHeld(updHeld); lsSet("kavo_held", updHeld);
+      
+      setStatus("Preparing"); setModal("kitchen"); showToast("Sent to kitchen", "ok");
+    }
   }
 
   // ── Save / pay ──
@@ -419,22 +481,28 @@ export default function POS({ onNavigate }) {
       savedAt:   nowISO(),
     };
     var upd = [o].concat(history); setHistory(upd); lsSet("kavo_orders", upd);
-    OrderService.save(o).catch(function() {});
+    if (firebaseServices && firebaseServices.orders) {
+      firebaseServices.orders.create(o).catch(function(err) { console.error('Error saving order:', err); });
+    }
     // Occupy the table as soon as a dine-in order is saved (not just on kitchen send)
-    if (type === "dine-in" && tableId && !pay) {
-      try { TableService.occupy(tableId); } catch(_) {}
+    if (type === "dine-in" && tableId && !pay && firebaseServices && firebaseServices.tables) {
+      firebaseServices.tables.updateStatus(tableId, 'occupied').catch(function(err) { console.error('Error updating table:', err); });
     }
     if (pay) {
       setStatus("Paid");
       // Deduct inventory for cart items that have recipes (non-blocking, background)
-      InventoryService.deductForOrder(cart, o.orderNo, false).catch(function() {});
+      if (firebaseServices && firebaseServices.inventory) {
+        firebaseServices.inventory.deductForOrder(cart, o.orderNo, false).catch(function(err) { console.warn('Inventory deduction skipped:', err); });
+      }
       // On payment: set table to Cleaning (staff cleans before seating next guests)
       // Table transitions: Occupied → Cleaning → Available (via Settings > Tables)
-      if (tableId) { try { TableService.setStatus(tableId, "Cleaning"); } catch(_) {} }
-      // Save receipt record
-      var rcp = { receiptId: "RCP-" + Date.now(), printedAt: nowISO(),
-                   order: o, printedDate: new Date().toLocaleDateString("en-GB") };
-      ReceiptService.save(rcp).catch(function() {});
+      if (tableId && firebaseServices && firebaseServices.tables) {
+        firebaseServices.tables.updateStatus(tableId, 'cleaning').catch(function(err) { console.error('Error updating table:', err); });
+      }
+      // Save receipt record (skip for now - need receipt service)
+      // var rcp = { receiptId: "RCP-" + Date.now(), printedAt: nowISO(),
+      //              order: o, printedDate: new Date().toLocaleDateString("en-GB") };
+      // ReceiptService.save(rcp).catch(function() {});
     } else {
       showToast("Order saved", "ok");
     }
@@ -449,8 +517,13 @@ export default function POS({ onNavigate }) {
     if (window.confirm(tr("voidOrder","🚫 Void").replace("🚫 ","") + " " + orderNo + "?")) {
       // Check if this order was already paid (has been deducted) — only restore if status is Paid
       if (status === "Paid") {
-        InventoryService.restoreForOrder(cart, orderNo, settings.cashier).catch(function() {});
-      if (tableId) { try { TableService.release(tableId); } catch(_) {} }
+        // Restore inventory if needed (note: InventoryService not available in POS for now)
+        // InventoryService.restoreForOrder(cart, orderNo, settings.cashier).catch(function() {});
+        if (tableId && firebaseServices && firebaseServices.tables) { 
+          try { 
+            firebaseServices.tables.release(tableId).catch(function() {}); 
+          } catch(_) {} 
+        }
       }
       resetOrder();
       showToast("Order voided", "warn");
@@ -507,16 +580,16 @@ export default function POS({ onNavigate }) {
           {/* Nav buttons */}
           <button className="pos-btn" onClick={function() { onNavigate("home"); }} style={ghostStyle(true)}>🏠 Home</button>
           {can("canAccessReports") &&
-            <button className="pos-btn" onClick={function() { onNavigate("reports"); }} style={ghostStyle(true)}>{tr("reports","Reports")}</button>}
+            <button className="pos-btn" onClick={function() { onNavigate("reports"); }} style={Object.assign({}, ghostStyle(true), currentScreen === "reports" ? {background: T.accDim, borderColor: T.acc, color: T.acc, cursor: "default"} : {})} disabled={currentScreen === "reports"}>{tr("reports","Reports")}</button>}
           {(can("canAccessSettings") || can("canManageMenu")) &&
-            <button className="pos-btn" onClick={function() { onNavigate("inventory"); }} style={ghostStyle(true)}>{tr("inventory","Inventory")}</button>}
+            <button className="pos-btn" onClick={function() { onNavigate("inventory"); }} style={Object.assign({}, ghostStyle(true), currentScreen === "inventory" ? {background: T.accDim, borderColor: T.acc, color: T.acc, cursor: "default"} : {})} disabled={currentScreen === "inventory"}>{tr("inventory","Inventory")}</button>}
           {can("canManageMenu") &&
-            <button className="pos-btn" onClick={function() { onNavigate("menu"); }} style={ghostStyle(true)}>{tr("menu","Menu")}</button>}
+            <button className="pos-btn" onClick={function() { onNavigate("menu"); }} style={Object.assign({}, ghostStyle(true), currentScreen === "menu" ? {background: T.accDim, borderColor: T.acc, color: T.acc, cursor: "default"} : {})} disabled={currentScreen === "menu"}>{tr("menu","Menu")}</button>}
           <LangSwitcher/>
           {can("canBackupRestore") &&
-            <button className="pos-btn" onClick={function() { onNavigate("data"); }} style={Object.assign({}, ghostStyle(true), {borderColor: T.acc + "40", color: T.acc})}>{tr("backup","Backup")}</button>}
+            <button className="pos-btn" onClick={function() { onNavigate("data"); }} style={Object.assign({}, ghostStyle(true), currentScreen === "data" ? {background: T.accDim, borderColor: T.acc, color: T.acc, cursor: "default"} : {borderColor: T.acc + "40", color: T.acc})} disabled={currentScreen === "data"}>{tr("backup","Backup")}</button>}
           {can("canAccessSettings") &&
-            <button className="pos-btn" onClick={function() { onNavigate("settings"); }} style={Object.assign({}, ghostStyle(true), {borderColor: T.acc + "40", color: T.acc})}>{tr("settings","Settings")}</button>}
+            <button className="pos-btn" onClick={function() { onNavigate("settings"); }} style={Object.assign({}, ghostStyle(true), currentScreen === "settings" ? {background: T.accDim, borderColor: T.acc, color: T.acc, cursor: "default"} : {borderColor: T.acc + "40", color: T.acc})} disabled={currentScreen === "settings"}>{tr("settings","Settings")}</button>}
           <div style={{ height:24, width:1, background:T.border }}/>
           {/* User */}
           <div style={{ background: userMeta.bg, border:"1px solid " + userMeta.color + "40",
@@ -684,9 +757,9 @@ export default function POS({ onNavigate }) {
               <div style={{ fontSize:32, marginBottom:6 }}>🛒</div>
               <div style={{ fontSize:12 }}>Cart is empty</div>
             </div>
-          ) : cart.map(function(item) {
+          ) : cart.map(function(item, idx) {
             return (
-              <div key={item.id} className="pos-row"
+              <div key={item.id + "_" + idx} className="pos-row"
                 style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 6px",
                          background:T.card, borderRadius:8, marginBottom:4,
                          border:"1px solid " + T.border }}>
@@ -1417,7 +1490,11 @@ export default function POS({ onNavigate }) {
                               "Table " + tbl.number + " is marked Occupied but no active order was found.\n\nClear table status and use it for a new order?"
                             )) return;
                             // Clear stale occupied status
-                            try { TableService.release(tbl.id); } catch(_) {}
+                            if (firebaseServices && firebaseServices.tables) {
+                              try { 
+                                firebaseServices.tables.release(tbl.id).catch(function() {}); 
+                              } catch(_) {}
+                            }
                           }
                           setTableNo(tbl.number);   // store raw number to avoid "Table Table 1"
                           setTableId(tbl.id);

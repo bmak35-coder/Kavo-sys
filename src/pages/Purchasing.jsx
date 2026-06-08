@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth, ROLE_META } from "../auth/AuthProvider";
+import { useTenant } from "../contexts/TenantProvider";
+import { useFirebaseServices } from "../firebase/FirebaseServicesProvider";
 import { SupplierService, PurchaseOrderService, PO_STATUSES, PO_STATUS_CFG } from "../db/services/purchasing.js";
 import { InventoryService } from "../db/services/inventory.js";
 import { useLang } from "../i18n/LanguageContext.jsx";
@@ -37,7 +39,12 @@ const TABS=[
 // ══════════════════════════════════════════════════════
 export default function Purchasing({ onBack }) {
   const { user } = useAuth();
+  const { tenantId } = useTenant();
+  const firebaseServices = useFirebaseServices();
   const umeta = ROLE_META[user?.role] || ROLE_META.admin;
+
+  // Use Firebase if tenant is active, otherwise use IndexedDB
+  const useFirebase = Boolean(tenantId && firebaseServices);
 
   const { t } = useLang();
 
@@ -60,19 +67,36 @@ export default function Purchasing({ onBack }) {
   const reload = useCallback(async()=>{
     setLoading(true);
     try {
-      const [sups,allPos,items,st] = await Promise.all([
-        SupplierService.getAll(),
-        PurchaseOrderService.getAll(),
-        InventoryService.getAll(),
-        PurchaseOrderService.getDashboardStats(),
-      ]);
-      setSuppliers(safeArr(sups));
-      setPos(safeArr(allPos));
-      setInvItems(safeArr(items));
-      setStats(st||{});
+      if (useFirebase) {
+        console.log('Loading purchasing data from Firebase');
+        const [sups,allPos,items,st] = await Promise.all([
+          firebaseServices.suppliers.getAll(),
+          firebaseServices.purchaseOrders.getAll(),
+          firebaseServices.inventory.getAll(),
+          firebaseServices.purchaseOrders.getDashboardStats(),
+        ]);
+        setSuppliers(safeArr(sups));
+        setPos(safeArr(allPos));
+        setInvItems(safeArr(items));
+        setStats(st||{});
+        console.log('Purchasing data loaded from Firebase');
+      } else {
+        console.log('Loading purchasing data from localStorage');
+        const [sups,allPos,items,st] = await Promise.all([
+          SupplierService.getAll(),
+          PurchaseOrderService.getAll(),
+          InventoryService.getAll(),
+          PurchaseOrderService.getDashboardStats(),
+        ]);
+        setSuppliers(safeArr(sups));
+        setPos(safeArr(allPos));
+        setInvItems(safeArr(items));
+        setStats(st||{});
+        console.log('Purchasing data loaded from localStorage');
+      }
     } catch(e){ console.error(e); }
     setLoading(false);
-  },[]);
+  },[useFirebase, firebaseServices]);
 
   useEffect(()=>{ reload(); },[reload]);
 
@@ -96,7 +120,11 @@ export default function Purchasing({ onBack }) {
   const receivePO = async(po)=>{
     if(!window.confirm(`Receive PO ${po.poNo}? This will update inventory stock.`)) return;
     try {
-      await PurchaseOrderService.receive(po.id, user?.name);
+      if (useFirebase) {
+        await firebaseServices.purchaseOrders.receive(po.id, user?.name);
+      } else {
+        await PurchaseOrderService.receive(po.id, user?.name);
+      }
       await reload();
       showToast(`PO ${po.poNo} received — stock updated`,"ok");
     } catch(e){ showToast(e.message||"Error","err"); }
@@ -104,13 +132,21 @@ export default function Purchasing({ onBack }) {
 
   const cancelPO = async(po)=>{
     if(!window.confirm(`Cancel PO ${po.poNo}?`)) return;
-    await PurchaseOrderService.cancel(po.id);
+    if (useFirebase) {
+      await firebaseServices.purchaseOrders.cancel(po.id);
+    } else {
+      await PurchaseOrderService.cancel(po.id);
+    }
     reload(); showToast(`PO ${po.poNo} cancelled`,"warn");
   };
 
   const deletePO = async(po)=>{
     if(!window.confirm(`Delete PO ${po.poNo}? This cannot be undone.`)) return;
-    await PurchaseOrderService.delete(po.id);
+    if (useFirebase) {
+      await firebaseServices.purchaseOrders.delete(po.id);
+    } else {
+      await PurchaseOrderService.delete(po.id);
+    }
     reload(); showToast("PO deleted","warn");
   };
 
@@ -222,7 +258,7 @@ export default function Purchasing({ onBack }) {
                 {/* Monthly chart */}
                 <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16,marginTop:12}}>
                   <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:14,letterSpacing:"0.04em"}}>📅 MONTHLY PURCHASE SPEND</div>
-                  <MonthlyChart pos={pos}/>
+                  <MonthlyChart pos={pos} useFirebase={useFirebase} firebaseServices={firebaseServices}/>
                 </div>
               </div>
             )}
@@ -315,7 +351,7 @@ export default function Purchasing({ onBack }) {
             {/* ══ REPORTS ══ */}
             {tab==="reports"&&(
               <div className="pu-in">
-                <PurchaseReports pos={pos} suppliers={suppliers}/>
+                <PurchaseReports pos={pos} suppliers={suppliers} useFirebase={useFirebase} firebaseServices={firebaseServices}/>
               </div>
             )}
           </>
@@ -327,8 +363,13 @@ export default function Purchasing({ onBack }) {
         <POFormModal
           po={selPO} suppliers={suppliers} invItems={invItems}
           onSave={async(data)=>{
-            if(selPO?.id && !data._isNew) await PurchaseOrderService.update(selPO.id,data);
-            else await PurchaseOrderService.create(data);
+            if (useFirebase) {
+              if(selPO?.id && !data._isNew) await firebaseServices.purchaseOrders.update(selPO.id,data);
+              else await firebaseServices.purchaseOrders.create(data);
+            } else {
+              if(selPO?.id && !data._isNew) await PurchaseOrderService.update(selPO.id,data);
+              else await PurchaseOrderService.create(data);
+            }
             reload(); setModal(null);
             showToast(selPO?.id?"PO updated":"PO created","ok");
           }}
@@ -340,19 +381,29 @@ export default function Purchasing({ onBack }) {
           onClose={()=>setModal(null)}
           onReceive={async()=>{ await receivePO(selPO); setModal(null); }}
           onCancel={async()=>{ await cancelPO(selPO); setModal(null); }}
-          onEdit={()=>setModal("createPO")}/>
+          onEdit={()=>setModal("createPO")}
+          useFirebase={useFirebase}
+          firebaseServices={firebaseServices}/>
       )}
       {modal==="editSupplier"&&(
         <SupplierFormModal
           supplier={selSup}
           onSave={async(data)=>{
-            await SupplierService.save({...selSup,...data});
+            if (useFirebase) {
+              await firebaseServices.suppliers.save({...selSup,...data});
+            } else {
+              await SupplierService.save({...selSup,...data});
+            }
             reload(); setModal(null);
             showToast(selSup?t("supplierUpdated"):t("supplierAdded"),"ok");
           }}
           onDelete={selSup?async()=>{
             if(window.confirm(`Remove ${selSup.name}?`)){
-              await SupplierService.delete(selSup.id);
+              if (useFirebase) {
+                await firebaseServices.suppliers.delete(selSup.id);
+              } else {
+                await SupplierService.delete(selSup.id);
+              }
               reload(); setModal(null); showToast("Supplier removed","warn");
             }
           }:null}
@@ -496,11 +547,15 @@ function POFormModal({ po, suppliers, invItems, onSave, onClose }) {
 }
 
 /* ── PO DETAIL MODAL ─────────────────────────────────*/
-function PODetailModal({ poId, onClose, onReceive, onCancel, onEdit }) {
+function PODetailModal({ poId, onClose, onReceive, onCancel, onEdit, useFirebase, firebaseServices }) {
   const [po, setPO] = useState(null);
   useEffect(()=>{
-    PurchaseOrderService.getOne(poId).then(p=>setPO(p||null));
-  },[poId]);
+    if (useFirebase) {
+      firebaseServices.purchaseOrders.getOne(poId).then(p=>setPO(p||null));
+    } else {
+      PurchaseOrderService.getOne(poId).then(p=>setPO(p||null));
+    }
+  },[poId, useFirebase, firebaseServices]);
   if(!po) return <PuModal title="Loading…" onClose={onClose}><Spinner small/></PuModal>;
   const cfg=PO_STATUS_CFG[po.status]||PO_STATUS_CFG.Draft;
   return (
@@ -689,15 +744,21 @@ function SupplierCard({ s, pos, onEdit, onNewPO }) {
 }
 
 /* ── PURCHASE REPORTS ────────────────────────────────*/
-function PurchaseReports({ pos, suppliers }) {
+function PurchaseReports({ pos, suppliers, useFirebase, firebaseServices }) {
   const [monthly, setMonthly]   = useState([]);
   const [topItems, setTopItems] = useState([]);
   const [spendBySup, setSpend]  = useState([]);
   useEffect(()=>{
-    PurchaseOrderService.monthlyTotals(6).then(setMonthly);
-    PurchaseOrderService.topPurchasedItems(8).then(setTopItems);
-    PurchaseOrderService.spendBySupplier().then(setSpend);
-  },[]);
+    if (useFirebase) {
+      firebaseServices.purchaseOrders.monthlyTotals(6).then(setMonthly);
+      firebaseServices.purchaseOrders.topPurchasedItems(8).then(setTopItems);
+      firebaseServices.purchaseOrders.spendBySupplier().then(setSpend);
+    } else {
+      PurchaseOrderService.monthlyTotals(6).then(setMonthly);
+      PurchaseOrderService.topPurchasedItems(8).then(setTopItems);
+      PurchaseOrderService.spendBySupplier().then(setSpend);
+    }
+  },[useFirebase, firebaseServices]);
 
   const received  = pos.filter(p=>p.status==="Received");
   const totalSpend= received.reduce((s,p)=>s+safeNum(p.total),0);
@@ -786,9 +847,15 @@ function PurchaseReports({ pos, suppliers }) {
 }
 
 /* ── MONTHLY CHART ───────────────────────────────────*/
-function MonthlyChart({ pos }) {
+function MonthlyChart({ pos, useFirebase, firebaseServices }) {
   const [data, setData] = useState([]);
-  useEffect(()=>{ PurchaseOrderService.monthlyTotals(6).then(setData); },[]);
+  useEffect(()=>{ 
+    if (useFirebase) {
+      firebaseServices.purchaseOrders.monthlyTotals(6).then(setData);
+    } else {
+      PurchaseOrderService.monthlyTotals(6).then(setData);
+    }
+  },[useFirebase, firebaseServices]);
   const max = Math.max(...data.map(d=>d.total), 0.01);
   return (
     <div>

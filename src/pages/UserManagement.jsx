@@ -7,6 +7,9 @@ import { useAuth, ROLE_META, PERMISSIONS } from "../auth/AuthProvider";
 import { useLang } from "../i18n/LanguageContext.jsx";
 import { db, safeDB } from "../db/db.js";
 import { DEFAULT_USERS } from "../auth/authConstants.js";
+import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
+import { useTenant } from "../contexts/TenantProvider.jsx";
+import { hashPassword } from "../utils/password.js";
 
 // ── Design tokens ──────────────────────────────────────────────────────
 const C = {
@@ -198,15 +201,21 @@ function UserModal({ user, onSave, onClose, currentUserId }) {
           </div>
         </div>
 
-<div style={{ display:"flex", gap:8 }}>
-  <button
-    onClick={save}
-    disabled={saving}
-    style={{ ...btnStyle(C.acc,"#000"), flex:2 }}
-  >
-    {saving ? "Saving..." : (isEdit ? "💾 Save Changes" : "👤 Create User")}
-  </button>
-</div>
+        <div style={{ display:"flex", gap:8 }}>
+          <button
+            onClick={save}
+            disabled={saving}
+            style={{ ...btnStyle(C.acc,"#000"), flex:2 }}
+          >
+            {saving ? "Saving..." : (isEdit ? "💾 Save Changes" : "👤 Create User")}
+          </button>
+          <button
+            onClick={onClose}
+            style={{ ...ghostStyle(), flex:1 }}
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -217,6 +226,11 @@ function UserModal({ user, onSave, onClose, currentUserId }) {
 export default function UserManagement({ onBack }) {
   const { user: currentUser, can } = useAuth();
   const { t } = useLang();
+
+  // Firebase integration
+  const firebaseServices = useFirebaseServices();
+  const { tenantId } = useTenant();
+  const useFirebase = !!tenantId && !!firebaseServices;
 
   const [users,    setUsers]    = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -232,14 +246,25 @@ export default function UserManagement({ onBack }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await safeDB(() => db.users.toArray(), []);
+      let rows;
+      if (useFirebase) {
+        console.log('Loading users from Firebase...');
+        rows = await firebaseServices.users.getAll();
+        console.log('Loaded users from Firebase:', rows);
+      } else {
+        rows = await safeDB(() => db.users.toArray(), []);
+        console.log('Loaded users from localStorage:', rows);
+      }
       setUsers(rows.sort((a,b) => {
         const roleOrder = {owner:0,admin:0,manager:1,cashier:2,kitchen:3};
         return (roleOrder[a.role]??4) - (roleOrder[b.role]??4) || a.name.localeCompare(b.name);
       }));
-    } catch { showToast("Failed to load users","err"); }
+    } catch(e) { 
+      console.error('Error loading users:', e);
+      showToast("Failed to load users","err"); 
+    }
     setLoading(false);
-  }, []);
+  }, [useFirebase, firebaseServices]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -247,8 +272,7 @@ export default function UserManagement({ onBack }) {
     const editUser = modal?.id ? modal : null;
     try {
       // Check username uniqueness
-      const all = await safeDB(() => db.users.toArray(), []);
-      const dup = all.find(u => u.username === form.username && u.id !== editUser?.id);
+      const dup = users.find(u => u.username === form.username && u.id !== editUser?.id);
       if (dup) { showToast("Username already exists","err"); return; }
 
       const record = {
@@ -261,20 +285,32 @@ export default function UserManagement({ onBack }) {
         updatedAt: new Date().toISOString(),
         createdAt: editUser?.createdAt || new Date().toISOString(),
       };
-      // Only update password if provided
-      if (form.password) record.password = form.password;
-      else if (editUser?.password) record.password = editUser.password;
-      else record.password = "changeme";
+      // Hash password if provided
+      if (form.password) {
+        record.password = await hashPassword(form.password);
+      } else if (editUser?.password) {
+        record.password = editUser.password;
+      } else {
+        record.password = await hashPassword("changeme");
+      }
 
-      await safeDB(() => db.users.put(record));
-      // Also update localStorage fallback
-      const updated = await safeDB(() => db.users.toArray(), []);
-      try { localStorage.setItem("kavo_users", JSON.stringify(updated)); } catch {}
+      console.log('Saving user:', record);
+      if (useFirebase) {
+        await firebaseServices.users.save(record);
+        console.log('User saved to Firebase');
+      } else {
+        await safeDB(() => db.users.put(record));
+        // Also update localStorage fallback
+        const updated = await safeDB(() => db.users.toArray(), []);
+        try { localStorage.setItem("kavo_users", JSON.stringify(updated)); } catch {}
+        console.log('User saved to localStorage');
+      }
 
       setModal(null);
       showToast(editUser ? "User updated" : "User created");
       load();
     } catch(e) {
+      console.error('Error saving user:', e);
       showToast("Save failed: " + e.message, "err");
     }
   }
@@ -283,19 +319,44 @@ export default function UserManagement({ onBack }) {
     if (u.id === currentUser?.id) {
       showToast("You cannot deactivate yourself","err"); return;
     }
-    await safeDB(() => db.users.update(u.id, { active: !u.active }));
-    showToast(u.active ? "User deactivated" : "User activated", u.active ? "warn" : "ok");
-    load();
+    try {
+      console.log('Toggling user active status:', u.id, !u.active);
+      if (useFirebase) {
+        await firebaseServices.users.update(u.id, { active: !u.active });
+        console.log('User status updated in Firebase');
+      } else {
+        await safeDB(() => db.users.update(u.id, { active: !u.active }));
+        console.log('User status updated in localStorage');
+      }
+      showToast(u.active ? "User deactivated" : "User activated", u.active ? "warn" : "ok");
+      load();
+    } catch(e) {
+      console.error('Error toggling user status:', e);
+      showToast("Update failed", "err");
+    }
   }
 
   async function deleteUser(id) {
     if (id === currentUser?.id) {
       showToast("You cannot delete yourself","err"); setDelId(null); return;
     }
-    await safeDB(() => db.users.delete(id));
-    setDelId(null);
-    showToast("User deleted","warn");
-    load();
+    try {
+      console.log('Deleting user:', id);
+      if (useFirebase) {
+        await firebaseServices.users.delete(id);
+        console.log('User deleted from Firebase');
+      } else {
+        await safeDB(() => db.users.delete(id));
+        console.log('User deleted from localStorage');
+      }
+      setDelId(null);
+      showToast("User deleted","warn");
+      load();
+    } catch(e) {
+      console.error('Error deleting user:', e);
+      showToast("Delete failed", "err");
+      setDelId(null);
+    }
   }
 
   async function resetToDefaults() {

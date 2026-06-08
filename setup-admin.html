@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Set Super Admin Claims</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #0d1117;
+      color: #c9d1d9;
+    }
+    .container {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 30px;
+    }
+    h1 {
+      color: #f0a500;
+      margin-top: 0;
+    }
+    button {
+      background: #f0a500;
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #ffc107;
+    }
+    button:disabled {
+      background: #6c5300;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      display: none;
+    }
+    .success {
+      background: #0d4429;
+      border: 1px solid #28a745;
+      color: #7ee787;
+    }
+    .error {
+      background: #2a1215;
+      border: 1px solid #f85149;
+      color: #ffa198;
+    }
+    code {
+      background: #0d1117;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    .instructions {
+      background: #1c2128;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 20px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .step {
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Set Super Admin Claims</h1>
+    
+    <div class="instructions">
+      <strong>Instructions:</strong>
+      <div class="step">1. Make sure you're logged in as <code>admin@kavo.com</code></div>
+      <div class="step">2. Open Browser Console (F12 → Console tab)</div>
+      <div class="step">3. Click the button below</div>
+      <div class="step">4. The script will get your ID token and use Firebase Auth REST API</div>
+    </div>
+
+    <button id="setClaimsBtn" onclick="setSuperAdminClaims()">
+      Set Super Admin Claims
+    </button>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAtTgtbmgUZVBWqsAjCXdh2N4_ROsligSU",
+      authDomain: "kavo-sys-a1118.firebaseapp.com",
+      projectId: "kavo-sys-a1118",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.setSuperAdminClaims = async function() {
+      const btn = document.getElementById('setClaimsBtn');
+      const result = document.getElementById('result');
+      
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      result.style.display = 'none';
+
+      try {
+        const user = auth.currentUser;
+        
+        if (!user) {
+          throw new Error('You must be logged in first. Go to /admin and sign in.');
+        }
+
+        console.log('Current user:', user.email, user.uid);
+
+        // Get ID token
+        const idToken = await user.getIdToken(true);
+        console.log('Got ID token');
+
+        // Show instructions for manual setup
+        result.className = 'result error';
+        result.style.display = 'block';
+        result.innerHTML = `
+          <strong>⚠️ Manual Setup Required</strong><br><br>
+          <strong>Your User ID:</strong> <code>${user.uid}</code><br>
+          <strong>Your Email:</strong> <code>${user.email}</code><br><br>
+          
+          <strong>Option 1: Using Firebase Console</strong><br>
+          1. Go to: <a href="https://console.cloud.google.com/iam-admin/iam?project=kavo-sys-a1118" target="_blank" style="color: #58a6ff;">Google Cloud IAM Console</a><br>
+          2. Grant yourself "Service Account User" role<br>
+          3. Then deploy the function with: <code>firebase deploy --only functions</code><br><br>
+          
+          <strong>Option 2: Using Firebase CLI (Easiest)</strong><br>
+          Run in terminal:<br>
+          <code style="display: block; padding: 10px; margin: 10px 0;">
+          firebase functions:shell<br>
+          admin.auth().setCustomUserClaims('${user.uid}', { role: 'admin' })
+          </code><br>
+          
+          <strong>Option 3: Using Node.js Script</strong><br>
+          Download service account key from Firebase Console and run the script.
+        `;
+
+        btn.textContent = 'See Instructions Above';
+        btn.disabled = false;
+
+      } catch (error) {
+        console.error('Error:', error);
+        result.className = 'result error';
+        result.style.display = 'block';
+        result.innerHTML = `<strong>Error:</strong> ${error.message}`;
+        btn.textContent = 'Try Again';
+        btn.disabled = false;
+      }
+    };
+
+    // Check auth state
+    onAuthStateChanged(auth, (user) => {
+      const btn = document.getElementById('setClaimsBtn');
+      if (user) {
+        console.log('✓ Logged in as:', user.email);
+      } else {
+        console.log('✗ Not logged in');
+        btn.disabled = true;
+        btn.textContent = 'Please sign in at /admin first';
+      }
+    });
+  </script>
+</body>
+</html>

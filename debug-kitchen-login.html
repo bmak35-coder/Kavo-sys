@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug Kitchen Login</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #070c16;
+      color: #e6edf3;
+    }
+    button {
+      background: #f0a500;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+    }
+    pre {
+      background: #0b1220;
+      padding: 15px;
+      border-radius: 8px;
+      overflow: auto;
+      border: 1px solid #1a2438;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Kitchen Login Debug Tool</h1>
+  <p>This tool helps debug kitchen user login issues</p>
+  
+  <div>
+    <button onclick="checkSessionStorage()">Check Session Storage</button>
+    <button onclick="checkIndexedDB()">Check IndexedDB Users</button>
+    <button onclick="clearSession()">Clear Session</button>
+    <button onclick="resetToDefaults()">Reset to Default Users</button>
+  </div>
+  
+  <h2>Results:</h2>
+  <pre id="output">Click a button above to run diagnostics...</pre>
+
+  <script>
+    const output = document.getElementById('output');
+    
+    function log(msg) {
+      output.textContent += msg + '\n';
+    }
+    
+    function clearOutput() {
+      output.textContent = '';
+    }
+    
+    function checkSessionStorage() {
+      clearOutput();
+      log('=== SESSION STORAGE ===');
+      const session = sessionStorage.getItem('kavo_session');
+      if (session) {
+        const parsed = JSON.parse(session);
+        log('Current session found:');
+        log(JSON.stringify(parsed, null, 2));
+        log('\nRole: ' + parsed.role);
+        log('Is Kitchen Role: ' + (parsed.role === 'kitchen'));
+      } else {
+        log('No session found - user is not logged in');
+      }
+    }
+    
+    async function checkIndexedDB() {
+      clearOutput();
+      log('=== INDEXEDDB USERS ===');
+      try {
+        const request = indexedDB.open('kavo_pos_db');
+        request.onsuccess = (e) => {
+          const db = e.target.result;
+          const tx = db.transaction('users', 'readonly');
+          const store = tx.objectStore('users');
+          const getAll = store.getAll();
+          
+          getAll.onsuccess = () => {
+            const users = getAll.result;
+            log('Found ' + users.length + ' users:\n');
+            users.forEach(user => {
+              log('- ' + user.username + ' (' + user.role + ') - ' + user.name);
+              if (user.role === 'kitchen') {
+                log('  ✅ Kitchen user found!');
+                log('  ID: ' + user.id);
+                log('  Active: ' + (user.active !== false));
+              }
+            });
+          };
+        };
+      } catch(e) {
+        log('Error: ' + e.message);
+      }
+    }
+    
+    function clearSession() {
+      clearOutput();
+      sessionStorage.removeItem('kavo_session');
+      log('✅ Session cleared! Refresh the page to go to login.');
+    }
+    
+    async function resetToDefaults() {
+      clearOutput();
+      log('Resetting to default users...');
+      
+      const defaults = [
+        { id:"u1", username:"owner",   password:"owner123",   name:"Restaurant Owner", role:"owner"   },
+        { id:"u2", username:"manager", password:"manager123", name:"Manager",          role:"manager" },
+        { id:"u3", username:"cashier", password:"cashier123", name:"Alex Kassem",      role:"cashier" },
+        { id:"u4", username:"kitchen", password:"kitchen123", name:"Kitchen Staff",    role:"kitchen" },
+      ];
+      
+      try {
+        const request = indexedDB.open('kavo_pos_db');
+        request.onsuccess = async (e) => {
+          const db = e.target.result;
+          const tx = db.transaction('users', 'readwrite');
+          const store = tx.objectStore('users');
+          
+          // Clear existing users
+          await store.clear();
+          
+          // Add defaults
+          defaults.forEach(user => {
+            store.put(user);
+          });
+          
+          tx.oncomplete = () => {
+            log('✅ Reset complete! Default users restored:');
+            defaults.forEach(u => {
+              log('  - ' + u.username + ' / ' + u.password + ' (' + u.role + ')');
+            });
+            log('\nYou can now log in with:');
+            log('  username: kitchen');
+            log('  password: kitchen123');
+          };
+        };
+      } catch(e) {
+        log('Error: ' + e.message);
+      }
+    }
+  </script>
+</body>
+</html>

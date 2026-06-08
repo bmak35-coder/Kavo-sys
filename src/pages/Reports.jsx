@@ -6,6 +6,8 @@ import { useActiveShift } from "../hooks/useActiveShift.js";
 import { SettingsService } from "../db/services/settings.js";
 import { BackupService } from "../db/services/backup.js";
 import { useLang } from "../i18n/LanguageContext.jsx";
+import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
+import { useTenant } from "../contexts/TenantProvider.jsx";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Reports & Shift Management  ·  v2.0
@@ -107,6 +109,11 @@ export default function Reports({ onBack }) {
 
   // ── State ──────────────────────────────────────────
   const { t } = useLang();
+  
+  // Firebase integration
+  const firebaseServices = useFirebaseServices();
+  const { tenantId } = useTenant();
+  const useFirebase = !!tenantId && !!firebaseServices;
 
   const DATE_FILTERS = [
     ["today",     t("filterToday")],
@@ -140,19 +147,43 @@ export default function Reports({ onBack }) {
   const [closeCash,      setCloseCash]      = useState("");
   const [cashierName,    setCashierName]    = useState(user?.name||"");
 
-  // ── Load all data from IDB on mount ──────────────
+  // ── Load all data from Firebase or IDB on mount ──────────────
   useEffect(() => {
-    OrderService.getAll().then(o => setAllOrders(safeArr(o))).catch(() => {
-      // LS fallback
-      try { const v=localStorage.getItem("kavo_orders"); if(v) setAllOrders(JSON.parse(v)||[]); } catch {}
-    });
-    ShiftService.getHistory().then(s => setShifts(safeArr(s))).catch(() => {
-      try { const v=localStorage.getItem("kavo_shifts"); if(v) setShifts(JSON.parse(v)||[]); } catch {}
-    });
-    ShiftService.getCurrent().then(s => setCurrentShift(s)).catch(() => {
-      try { const v=localStorage.getItem("kavo_current_shift"); if(v) setCurrentShift(JSON.parse(v)); } catch {}
-    });
-  }, []);
+    const loadData = async () => {
+      try {
+        if (useFirebase) {
+          console.log('Loading reports data from Firebase...');
+          const [orders, shiftHistory, current] = await Promise.all([
+            firebaseServices.orders.getAll(),
+            firebaseServices.shifts.getHistory(),
+            firebaseServices.shifts.getCurrent(),
+          ]);
+          setAllOrders(safeArr(orders));
+          setShifts(safeArr(shiftHistory));
+          setCurrentShift(current);
+          console.log('Loaded from Firebase - Orders:', orders.length, 'Shifts:', shiftHistory.length);
+        } else {
+          console.log('Loading reports data from localStorage...');
+          const orders = await OrderService.getAll().catch(() => {
+            try { const v=localStorage.getItem("kavo_orders"); return v ? JSON.parse(v)||[] : []; } catch { return []; }
+          });
+          const shiftHistory = await ShiftService.getHistory().catch(() => {
+            try { const v=localStorage.getItem("kavo_shifts"); return v ? JSON.parse(v)||[] : []; } catch { return []; }
+          });
+          const current = await ShiftService.getCurrent().catch(() => {
+            try { const v=localStorage.getItem("kavo_current_shift"); return v ? JSON.parse(v) : null; } catch { return null; }
+          });
+          setAllOrders(safeArr(orders));
+          setShifts(safeArr(shiftHistory));
+          setCurrentShift(current);
+          console.log('Loaded from localStorage - Orders:', orders.length, 'Shifts:', shiftHistory.length);
+        }
+      } catch (error) {
+        console.error('Error loading reports data:', error);
+      }
+    };
+    loadData();
+  }, [useFirebase, firebaseServices]);
 
   // ── Date filter ──────────────────────────────────
   const filteredOrders = useMemo(()=>{
@@ -191,7 +222,7 @@ export default function Reports({ onBack }) {
   const shiftSummary = useMemo(()=>calcSummary(shiftOrders),[shiftOrders]);
 
   // ── Shift actions ────────────────────────────────
-  const openShift = () => {
+  const openShift = async () => {
     if(!cashierName.trim()){alert("Enter cashier name");return;}
     const s={
       shiftId: genShiftId(),  // named shiftId so the hook can reference it
@@ -199,16 +230,28 @@ export default function Reports({ onBack }) {
       status: "open", openedAt: new Date().toISOString(), closedAt: null,
       openingCash: safeNum(openCash), closingCash: null, summary: null,
     };
-    // Write to IDB first, then reload hook (avoids optimistic overwrite race)
-    ShiftService.openShift(s).then(() => reloadShift()).catch(() => {
-      // IDB failed — fall back to local state
+    try {
+      if (useFirebase) {
+        console.log('Opening shift in Firebase:', s.shiftId);
+        await firebaseServices.shifts.openShift(s);
+        await reloadShift();
+        console.log('Shift opened in Firebase');
+      } else {
+        console.log('Opening shift in localStorage:', s.shiftId);
+        await ShiftService.openShift(s);
+        await reloadShift();
+        console.log('Shift opened in localStorage');
+      }
+    } catch (error) {
+      console.error('Error opening shift:', error);
+      // Fallback to local state
       setCurrentShift(s);
-    });
+    }
     setShowOpenModal(false);
     setOpenCash("");
   };
 
-  const closeShift = () => {
+  const closeShift = async () => {
     if(!currentShift) return;
     // Require explicit entry of actual closing cash
     // Empty string = "Not Reconciled" (cashier skipped) — different from entering 0
@@ -237,10 +280,26 @@ export default function Reports({ onBack }) {
         reconciled:   actualEntered,
       },
     };
-    ShiftService.saveClosedShift(closedShift).catch(() => {});
-    ShiftService.clearCurrentShift().then(() => reloadShift()).catch(() => {
+    
+    try {
+      if (useFirebase) {
+        console.log('Closing shift in Firebase:', closedShift.id);
+        await firebaseServices.shifts.saveClosedShift(closedShift);
+        await firebaseServices.shifts.clearCurrentShift();
+        await reloadShift();
+        console.log('Shift closed in Firebase');
+      } else {
+        console.log('Closing shift in localStorage:', closedShift.id);
+        await ShiftService.saveClosedShift(closedShift);
+        await ShiftService.clearCurrentShift();
+        await reloadShift();
+        console.log('Shift closed in localStorage');
+      }
+    } catch (error) {
+      console.error('Error closing shift:', error);
+      // Fallback
       localStorage.removeItem(SHIFT_KEY);
-    });
+    }
     
     const upd=[closedShift,...shifts];
     setShifts(upd);
@@ -249,20 +308,47 @@ export default function Reports({ onBack }) {
     setCloseCash("");
   };
 
-  const deleteShift = (id) => {
-    ShiftService.deleteShift(id).catch(() => {});
+  const deleteShift = async (id) => {
+    try {
+      if (useFirebase) {
+        console.log('Deleting shift from Firebase:', id);
+        await firebaseServices.shifts.deleteShift(id);
+        console.log('Shift deleted from Firebase');
+      } else {
+        console.log('Deleting shift from localStorage:', id);
+        await ShiftService.deleteShift(id);
+        console.log('Shift deleted from localStorage');
+      }
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+    }
     const upd=shifts.filter(s=>s.id!==id);
     setShifts(upd);
     setShowDelConfirm(null);
     if(selectedShift?.id===id) setSelectedShift(null);
   };
 
-  const reopenShift = (s) => {
+  const reopenShift = async (s) => {
     const upd=shifts.filter(x=>x.id!==s.id);
-    ShiftService.deleteShift(s.id).catch(() => {});
-    setShifts(upd);
     const reopened={...s,status:"open",closedAt:null,summary:null};
-    ShiftService.openShift(reopened).catch(() => {});
+    
+    try {
+      if (useFirebase) {
+        console.log('Reopening shift in Firebase:', s.id);
+        await firebaseServices.shifts.deleteShift(s.id);
+        await firebaseServices.shifts.openShift(reopened);
+        console.log('Shift reopened in Firebase');
+      } else {
+        console.log('Reopening shift in localStorage:', s.id);
+        await ShiftService.deleteShift(s.id);
+        await ShiftService.openShift(reopened);
+        console.log('Shift reopened in localStorage');
+      }
+    } catch (error) {
+      console.error('Error reopening shift:', error);
+    }
+    
+    setShifts(upd);
     setCurrentShift(reopened);
     setSelectedShift(null);
   };

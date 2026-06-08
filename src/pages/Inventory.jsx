@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth, ROLE_META } from "../auth/AuthProvider";
+import { useTenant } from "../contexts/TenantProvider";
+import { useFirebaseServices } from "../firebase/FirebaseServicesProvider";
 import {
   InventoryService, RecipeService, StockLogService,
   LOG_TYPES, UNITS, unitLabel,
@@ -64,6 +66,12 @@ function stockStatus(item){
 // ══════════════════════════════════════════════════════
 export default function Inventory({ onBack, onNavigate = () => {} }) {
   const { user, can } = useAuth();
+  const { tenantId } = useTenant();
+  const firebaseServices = useFirebaseServices();
+  
+  // Use Firebase if tenant is active, otherwise use IndexedDB
+  const useFirebase = Boolean(tenantId && firebaseServices);
+
   const isAdmin   = user?.role === "admin";
   const isKitchen = user?.role === "kitchen";
   const umeta     = ROLE_META[user?.role] || ROLE_META.cashier;
@@ -87,19 +95,36 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
   const reload = useCallback(async()=>{
     setLoading(true);
     try {
-      const [allItems,allLogs,usage,st] = await Promise.all([
-        InventoryService.getAll(),
-        StockLogService.getRecent(200),
-        StockLogService.getTodayUsage(),
-        InventoryService.getDashboardStats(),
-      ]);
-      setItems(safeArr(allItems));
-      setLogs(safeArr(allLogs));
-      setTodayUse(safeArr(usage));
-      setStats(st||{total:0,low:0,out:0,totalValue:0,items:[]});
+      if (useFirebase) {
+        console.log('Loading inventory from Firebase');
+        const [allItems, allLogs, usage, st] = await Promise.all([
+          firebaseServices.inventory.getAll(),
+          firebaseServices.stockLogs.getRecent(200),
+          firebaseServices.stockLogs.getTodayUsage(),
+          firebaseServices.inventory.getDashboardStats(),
+        ]);
+        setItems(safeArr(allItems));
+        setLogs(safeArr(allLogs));
+        setTodayUse(safeArr(usage));
+        setStats(st||{total:0,low:0,out:0,totalValue:0,items:[]});
+        console.log('Inventory loaded from Firebase');
+      } else {
+        console.log('Loading inventory from localStorage');
+        const [allItems,allLogs,usage,st] = await Promise.all([
+          InventoryService.getAll(),
+          StockLogService.getRecent(200),
+          StockLogService.getTodayUsage(),
+          InventoryService.getDashboardStats(),
+        ]);
+        setItems(safeArr(allItems));
+        setLogs(safeArr(allLogs));
+        setTodayUse(safeArr(usage));
+        setStats(st||{total:0,low:0,out:0,totalValue:0,items:[]});
+        console.log('Inventory loaded from localStorage');
+      }
     } catch(e){ console.error(e); }
     setLoading(false);
-  },[]);
+  },[useFirebase, firebaseServices]);
 
   useEffect(()=>{ reload(); },[reload]);
 
@@ -306,7 +331,7 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
                 <div style={{fontSize:12,color:C.muted,marginBottom:14,padding:"8px 12px",background:C.card,borderRadius:8,border:`1px solid ${C.bdr}`}}>
                   📌 Recipes define which inventory ingredients get deducted when an order is paid. Assign ingredients to each menu item.
                 </div>
-                <RecipeManager menuItems={menuItems} inventoryItems={items} onUpdate={reload}/>
+                <RecipeManager menuItems={menuItems} inventoryItems={items} onUpdate={reload} useFirebase={useFirebase} firebaseServices={firebaseServices}/>
               </div>
             )}
 
@@ -330,32 +355,75 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
       {/* ═══ MODALS ═══ */}
       {modal==="addItem" && (
         <ItemFormModal title="Add Inventory Item" item={null}
-          onSave={async(data)=>{ await InventoryService.save(data); reload(); setModal(null); showToast("Item added"); }}
+          onSave={async(data)=>{ 
+            if (useFirebase) {
+              await firebaseServices.inventory.save(data);
+            } else {
+              await InventoryService.save(data);
+            }
+            reload(); setModal(null); showToast("Item added"); 
+          }}
           onClose={()=>setModal(null)}/>
       )}
       {modal==="editItem" && selItem && (
         <ItemFormModal title="Edit Item" item={selItem}
-          onSave={async(data)=>{ await InventoryService.save({...selItem,...data}); reload(); setModal(null); showToast("Item updated"); }}
+          onSave={async(data)=>{ 
+            if (useFirebase) {
+              await firebaseServices.inventory.save({...selItem,...data});
+            } else {
+              await InventoryService.save({...selItem,...data});
+            }
+            reload(); setModal(null); showToast("Item updated"); 
+          }}
           onClose={()=>setModal(null)}
-          onDelete={isAdmin?async()=>{ await InventoryService.delete(selItem.id); reload(); setModal(null); showToast("Item deleted","warn"); }:null}/>
+          onDelete={isAdmin?async()=>{ 
+            if (useFirebase) {
+              await firebaseServices.inventory.delete(selItem.id);
+            } else {
+              await InventoryService.delete(selItem.id);
+            }
+            reload(); setModal(null); showToast("Item deleted","warn"); 
+          }:null}/>
       )}
       {modal==="addStock" && selItem && (
         <StockActionModal title="Add Stock" item={selItem} action="add"
-          onSave={async(qty,note)=>{ await InventoryService.addStock(selItem.id,qty,note,user?.name);  reload(); setModal(null); showToast(`+${qty} ${selItem.unit} added`); }}
+          onSave={async(qty,note)=>{ 
+            if (useFirebase) {
+              await firebaseServices.inventory.addStock(selItem.id,qty,note,user?.name);
+            } else {
+              await InventoryService.addStock(selItem.id,qty,note,user?.name);
+            }
+            reload(); setModal(null); showToast(`+${qty} ${selItem.unit} added`); 
+          }}
           onClose={()=>setModal(null)}/>
       )}
       {modal==="adjust" && selItem && (
         <StockActionModal title="Adjust Stock" item={selItem} action="adjust"
-          onSave={async(qty,note)=>{ const before_=selItem.currentStock; await InventoryService.adjustStock(selItem.id,qty,note,user?.name);  reload(); setModal(null); showToast("Stock adjusted"); }}
+          onSave={async(qty,note)=>{ 
+            const before_=selItem.currentStock; 
+            if (useFirebase) {
+              await firebaseServices.inventory.adjustStock(selItem.id,qty,note,user?.name);
+            } else {
+              await InventoryService.adjustStock(selItem.id,qty,note,user?.name);
+            }
+            reload(); setModal(null); showToast("Stock adjusted"); 
+          }}
           onClose={()=>setModal(null)}/>
       )}
       {modal==="waste" && selItem && (
         <StockActionModal title="Log Waste" item={selItem} action="waste"
-          onSave={async(qty,note)=>{ await InventoryService.logWaste(selItem.id,qty,note,user?.name);  reload(); setModal(null); showToast("Waste logged","warn"); }}
+          onSave={async(qty,note)=>{ 
+            if (useFirebase) {
+              await firebaseServices.inventory.logWaste(selItem.id,qty,note,user?.name);
+            } else {
+              await InventoryService.logWaste(selItem.id,qty,note,user?.name);
+            }
+            reload(); setModal(null); showToast("Waste logged","warn"); 
+          }}
           onClose={()=>setModal(null)}/>
       )}
       {modal==="logs" && selItem && (
-        <ItemLogsModal item={selItem} onClose={()=>setModal(null)}/>
+        <ItemLogsModal item={selItem} onClose={()=>setModal(null)} useFirebase={useFirebase} firebaseServices={firebaseServices}/>
       )}
 
       {/* Toast */}
@@ -537,12 +605,16 @@ function StockActionModal({ title, item, action, onSave, onClose }) {
 }
 
 /* ── ITEM LOGS MODAL ─────────────────────────────────*/
-function ItemLogsModal({ item, onClose }) {
+function ItemLogsModal({ item, onClose, useFirebase, firebaseServices }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(()=>{
-    StockLogService.getByItem(item.id).then(l=>{setLogs(safeArr(l));setLoading(false);});
-  },[item.id]);
+    if (useFirebase) {
+      firebaseServices.stockLogs.getByItem(item.id).then(l=>{setLogs(safeArr(l));setLoading(false);});
+    } else {
+      StockLogService.getByItem(item.id).then(l=>{setLogs(safeArr(l));setLoading(false);});
+    }
+  },[item.id, useFirebase, firebaseServices]);
   const TYPE_COL={add:C.success,deduct:C.info,adjust:C.warn,waste:C.danger,transfer:"#a78bfa"};
   return (
     <InvModal title={`📋 Logs — ${item.name}`} onClose={onClose} wide>
@@ -571,7 +643,7 @@ function ItemLogsModal({ item, onClose }) {
 }
 
 /* ── RECIPE MANAGER ──────────────────────────────────*/
-function RecipeManager({ menuItems, inventoryItems, onUpdate }) {
+function RecipeManager({ menuItems, inventoryItems, onUpdate, useFirebase, firebaseServices }) {
   const [selMenu,   setSelMenu]   = useState(null);
   const [recipe,    setRecipe]    = useState([]);
   const [saving,    setSaving]    = useState(false);
@@ -581,8 +653,13 @@ function RecipeManager({ menuItems, inventoryItems, onUpdate }) {
 
   const loadRecipe = async(menuItem)=>{
     setSelMenu(menuItem);
-    const r = await RecipeService.get(menuItem.id);
-    setRecipe(safeArr(r.ingredients));
+    if (useFirebase) {
+      const r = await firebaseServices.recipes.get(menuItem.id);
+      setRecipe(safeArr(r.ingredients));
+    } else {
+      const r = await RecipeService.get(menuItem.id);
+      setRecipe(safeArr(r.ingredients));
+    }
   };
 
   const addIngredient = ()=>setRecipe(p=>[...p,{inventoryItemId:"",inventoryItemName:"",qty:1,unit:"g"}]);
@@ -603,7 +680,11 @@ function RecipeManager({ menuItems, inventoryItems, onUpdate }) {
   const save=async()=>{
     if(!selMenu) return;
     setSaving(true);
-    await RecipeService.save(selMenu.id, recipe.filter(r=>r.inventoryItemId));
+    if (useFirebase) {
+      await firebaseServices.recipes.save(selMenu.id, recipe.filter(r=>r.inventoryItemId));
+    } else {
+      await RecipeService.save(selMenu.id, recipe.filter(r=>r.inventoryItemId));
+    }
     setSaving(false);
     onUpdate();
   };
@@ -677,7 +758,15 @@ function RecipeManager({ menuItems, inventoryItems, onUpdate }) {
                 <button className="iv-btn" onClick={save} disabled={saving} style={{...Btn(C.acc),flex:1,opacity:saving?0.6:1}}>
                   {saving?"Saving…":"💾 Save Recipe"}
                 </button>
-                <button className="iv-btn" onClick={async()=>{await RecipeService.delete(selMenu.id);setRecipe([]);onUpdate();}} style={{...Ghost(C.danger)}}>Clear</button>
+                <button className="iv-btn" onClick={async()=>{
+                  if (useFirebase) {
+                    await firebaseServices.recipes.delete(selMenu.id);
+                  } else {
+                    await RecipeService.delete(selMenu.id);
+                  }
+                  setRecipe([]);
+                  onUpdate();
+                }} style={{...Ghost(C.danger)}}>Clear</button>
               </div>
             </>
           )

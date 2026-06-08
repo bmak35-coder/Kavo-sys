@@ -1,0 +1,108 @@
+rules_version = '2';
+
+/**
+ * ⚠️ TEMPORARY DEVELOPMENT RULES - DO NOT USE IN PRODUCTION ⚠️
+ * 
+ * These rules are INSECURE and allow open access for development/testing.
+ * Tenant users authenticate via Firestore, not Firebase Auth, so they have no auth token.
+ * 
+ * TODO: Before production, migrate tenant users to Firebase Auth with custom claims.
+ * 
+ * SECURITY WARNING: These rules allow anyone to read/write tenant data.
+ * Only use in development with test data.
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================== HELPER FUNCTIONS ====================
+
+    /**
+     * Check if user is authenticated with Firebase Auth
+     */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /**
+     * Check if user is a super admin (platform administrator)
+     * Super admins have role == 'admin' custom claim
+     */
+    function isSuperAdmin() {
+      return isAuthenticated() 
+        && request.auth.token.role == 'admin';
+    }
+
+    // ==================== TENANT RULES (TEMP - INSECURE) ====================
+    
+    /**
+     * ⚠️ TEMPORARY: Allow all reads/writes for tenant data
+     * This is needed because tenant users authenticate via Firestore, not Firebase Auth
+     */
+    match /tenants/{tenantId} {
+      // Super admins can do everything
+      allow read, write: if isSuperAdmin();
+      
+      // ⚠️ TEMP: Allow all access for tenant data (INSECURE - DEV ONLY)
+      allow read, write: if true;
+      
+      // All subcollections under tenants
+      match /{document=**} {
+        // Super admins can access everything
+        allow read, write: if isSuperAdmin();
+        
+        // ⚠️ TEMP: Allow all access (INSECURE - DEV ONLY)
+        allow read, write: if true;
+      }
+    }
+
+    // ==================== SUPER ADMIN RULES ====================
+    
+    /**
+     * Platform admin documents - only accessible by super admins with Firebase Auth
+     */
+    match /admins/{adminId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /platformSettings/{settingId} {
+      allow read, write: if isSuperAdmin();
+    }
+    
+    // ==================== CATCH-ALL ====================
+    
+    /**
+     * ⚠️ TEMP: Allow all access to other collections (INSECURE - DEV ONLY)
+     */
+    match /{document=**} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if true; // INSECURE - REMOVE BEFORE PRODUCTION
+    }
+  }
+}
+
+/**
+ * ==================== PRODUCTION RULES (TODO) ====================
+ * 
+ * Before production, implement these requirements:
+ * 
+ * 1. Migrate tenant users to Firebase Authentication
+ *    - Create Firebase Auth users for all tenant users
+ *    - Set custom claims: { tenantId: '...', role: 'owner' }
+ *    - Use signInWithEmailAndPassword for login
+ * 
+ * 2. Update security rules to use custom claims
+ *    - function tenantMatch(tenantId) {
+ *        return request.auth.token.tenantId == tenantId;
+ *      }
+ *    - Replace "if true" with proper tenant validation
+ * 
+ * 3. Test thoroughly
+ *    - Verify tenant isolation
+ *    - Test all CRUD operations
+ *    - Verify super admin access
+ * 
+ * 4. Deploy secure rules
+ *    - Remove all "if true" rules
+ *    - Verify no data leaks between tenants
+ */

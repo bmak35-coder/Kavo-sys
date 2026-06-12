@@ -70,8 +70,15 @@ export default function Tables({ onBack }) {
 
   async function saveTable() {
     if (!form.number?.trim()) {
-      showToast("Table number required", "err");
+      showToast("Table number is required", "err");
       return;
+    }
+    if (form.capacity !== undefined && form.capacity !== "") {
+      const cap = +form.capacity;
+      if (!isFinite(cap) || cap < 1 || cap > 50 || !Number.isInteger(cap)) {
+        showToast("Capacity must be a whole number between 1 and 50", "err");
+        return;
+      }
     }
 
     // Check for duplicate table number

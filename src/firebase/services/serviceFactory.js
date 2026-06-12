@@ -22,6 +22,7 @@ import {
   FirestoreSupplierService,
   FirestorePurchaseOrderService
 } from './firestorePurchasingService';
+import { FirestoreAuditLogService } from './auditService';
 
 /**
  * Service Factory for creating tenant-specific service instances
@@ -51,6 +52,7 @@ export function createFirebaseServices(tenantId) {
     payroll: new FirestorePayrollService(tenantId),
     suppliers: new FirestoreSupplierService(tenantId),
     purchaseOrders: new FirestorePurchaseOrderService(tenantId),
+    auditLogs: new FirestoreAuditLogService(tenantId),
   };
 }
 

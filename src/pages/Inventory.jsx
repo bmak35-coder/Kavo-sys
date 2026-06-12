@@ -554,7 +554,13 @@ function ItemFormModal({ title, item, onSave, onClose, onDelete }) {
         </div>
       </div>
       <div style={{display:"flex",gap:8,marginTop:4}}>
-        <button className="iv-btn" onClick={()=>{ if(!f.name.trim()){alert("Name required");return;} onSave(f); }} style={{...Btn(C.acc),flex:1}}>Save</button>
+        <button className="iv-btn" onClick={()=>{
+          if(!f.name.trim()){alert("Item name is required");return;}
+          if(f.currentStock !== "" && +f.currentStock < 0){alert("Current stock cannot be negative");return;}
+          if(f.minStock !== "" && +f.minStock < 0){alert("Min stock alert cannot be negative");return;}
+          if(f.costPrice !== "" && +f.costPrice < 0){alert("Cost price cannot be negative");return;}
+          onSave(f);
+        }} style={{...Btn(C.acc),flex:1}}>Save</button>
         <button className="iv-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>
         {onDelete&&<button className="iv-btn" onClick={()=>{if(confirm("Delete this item and all its logs?")) onDelete();}} style={Btn(C.danger,"#fff")}>🗑</button>}
       </div>
@@ -594,7 +600,11 @@ function StockActionModal({ title, item, action, onSave, onClose }) {
         <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Reason, supplier, etc." style={Inp}/>
       </div>
       <div style={{display:"flex",gap:8}}>
-        <button className="iv-btn" onClick={()=>{if(!qty){alert("Enter quantity");return;} onSave(safeNum(qty),note);}}
+        <button className="iv-btn" onClick={()=>{
+          if(!qty && qty!=="0"){alert("Enter a quantity");return;}
+          if(safeNum(qty) <= 0){alert("Quantity must be greater than 0");return;}
+          onSave(safeNum(qty),note);
+        }}
           style={{...Btn(action==="add"?C.success:action==="waste"?C.warn:C.info,"#000"),flex:1}}>
           {action==="add"?"+ Add Stock":action==="waste"?"Log Waste":"Adjust Stock"}
         </button>

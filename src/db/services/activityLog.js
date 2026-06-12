@@ -53,6 +53,11 @@ export function setLogSession(session) {
 }
 export function clearLogSession() { _session = null; }
 
+// ── Firebase dual-write (set from FirebaseServicesProvider when tenant is active) ──
+let _firebaseWriter = null;
+export function setFirebaseAuditWriter(fn) { _firebaseWriter = typeof fn === "function" ? fn : null; }
+export function clearFirebaseAuditWriter() { _firebaseWriter = null; }
+
 // ── DB readiness guard ────────────────────────────────
 function dbReady() {
   try { return !!(db && db.isOpen()); } catch { return false; }
@@ -60,11 +65,10 @@ function dbReady() {
 
 // ── Core write (function declaration = hoisted, no TDZ) ──
 export async function writeLog(opts) {
-  if (!dbReady()) return;
   if (!opts || !opts.action) return;
   try {
     const s = _session;
-    await db.activityLogs.add({
+    const logData = {
       action:      opts.action,
       category:    opts.action.split(".")[0] || "system",
       description: String(opts.description || ""),
@@ -76,14 +80,24 @@ export async function writeLog(opts) {
       userName:    opts.userName  || s?.name || "System",
       userRole:    opts.userRole  || s?.role || "system",
       createdAt:   new Date().toISOString(),
-    });
-    // Non-blocking cap trim
-    db.activityLogs.count().then(n => {
-      if (n > MAX_LOGS) {
-        db.activityLogs.orderBy("createdAt").limit(n - MAX_LOGS)
-          .primaryKeys().then(k => db.activityLogs.bulkDelete(k)).catch(() => {});
-      }
-    }).catch(() => {});
+    };
+
+    // Write to IndexedDB if available
+    if (dbReady()) {
+      await db.activityLogs.add(logData);
+      // Non-blocking cap trim
+      db.activityLogs.count().then(n => {
+        if (n > MAX_LOGS) {
+          db.activityLogs.orderBy("createdAt").limit(n - MAX_LOGS)
+            .primaryKeys().then(k => db.activityLogs.bulkDelete(k)).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
+    // Dual-write to Firebase if writer is registered (fire-and-forget)
+    if (_firebaseWriter) {
+      _firebaseWriter(logData).catch(() => {});
+    }
   } catch (e) {
     console.warn("[KAVO-LOG] write failed (non-fatal):", e?.message || e);
   }

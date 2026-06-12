@@ -788,7 +788,13 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
 
       {/* Footer */}
       <div style={{ display:"flex", gap:8, marginTop:16, borderTop:`1px solid ${C.bdr}`, paddingTop:14 }}>
-        <button className="mm-btn" onClick={() => { if(!f.name.trim()){alert("Item name required");return;} if(!f.price){alert("Price required");return;} onSave(f); }} style={{...Btn(C.acc),flex:1}}>
+        <button className="mm-btn" onClick={() => {
+          if(!f.name.trim()){alert("Item name is required");return;}
+          if(!f.price && f.price!==0){alert("Selling price is required");return;}
+          if(+f.price <= 0){alert("Selling price must be greater than 0");return;}
+          if(f.costPrice !== "" && +f.costPrice < 0){alert("Cost price cannot be negative");return;}
+          onSave(f);
+        }} style={{...Btn(C.acc),flex:1}}>
           {item ? "💾 Update Item" : "✅ Create Item"}
         </button>
         <button className="mm-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>

@@ -3,8 +3,9 @@
  * Provides tenant-specific Firebase services to the React app
  */
 
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, useEffect } from 'react';
 import { getFirebaseServices } from './services/serviceFactory';
+import { setFirebaseAuditWriter, clearFirebaseAuditWriter } from '../db/services/activityLog';
 
 const FirebaseServicesContext = createContext(null);
 
@@ -26,6 +27,14 @@ export function FirebaseServicesProvider({ children, tenantId }) {
       return null;
     }
   }, [tenantId]);
+
+  // Register Firebase audit writer so writeLog() dual-writes to Firestore
+  useEffect(() => {
+    if (services?.auditLogs) {
+      setFirebaseAuditWriter((logData) => services.auditLogs.write(logData));
+      return () => clearFirebaseAuditWriter();
+    }
+  }, [services]);
 
   return (
     <FirebaseServicesContext.Provider value={services}>

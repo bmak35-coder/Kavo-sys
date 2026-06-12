@@ -6,6 +6,7 @@ import { useLang } from "../i18n/LanguageContext.jsx";
 import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
 import { useTenant } from "../contexts/TenantProvider.jsx";
 import { hashPassword } from "../utils/password.js";
+import { isValidPhone, isValidEmail, isValidUrl, isPositive, isPercent, MSG } from "../utils/validate.js";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Settings Center  ·  v1.0
@@ -126,6 +127,19 @@ export default function SettingsCenter({ onBack }) {
   const setP = (k, v) => { setPos(p => ({...p,[k]:v})); setDirty(true); };
 
   const save = async () => {
+    // Validate business fields before saving
+    const validationErrors = [];
+    if (!isValidPhone(app.phone))   validationErrors.push("Phone number format is invalid");
+    if (!isValidEmail(app.email))   validationErrors.push("Email format is invalid");
+    if (!isValidUrl(app.website))   validationErrors.push("Website URL format is invalid");
+    if (currency.secondaryCurrency !== "None" && !isPositive(currency.exchangeRate))
+      validationErrors.push("Exchange rate must be greater than 0");
+    if (!isPercent(app.taxRate ?? 11))     validationErrors.push("Tax rate must be between 0 and 100");
+    if (!isPercent(app.serviceRate ?? 10)) validationErrors.push("Service charge rate must be between 0 and 100");
+    if (validationErrors.length) {
+      showToast(validationErrors[0], "err");
+      return;
+    }
     setSaving(true);
     try {
       // Sync app fields into receipt settings (overlapping fields)
@@ -596,11 +610,14 @@ function UserFormModal({ user, onSave, onClose }) {
   const [password, setPassword]= useState("");
   const [role,     setRole]    = useState(user?.role     || "cashier");
   const [showPwd,  setShowPwd] = useState(false);
+  const [pwdError, setPwdError]= useState("");
 
   const save = async () => {
     if (!name.trim())     { alert("Name required"); return; }
     if (!username.trim()) { alert("Username required"); return; }
     if (!user && !password) { alert("Password required for new user"); return; }
+    if (password && password.length < 6) { setPwdError(MSG.pwdShort); return; }
+    setPwdError("");
     
     const data = {
       id:       user?.id || `u_${Date.now()}`,
@@ -638,11 +655,12 @@ function UserFormModal({ user, onSave, onClose }) {
         <div style={{ marginBottom:12 }}>
           <FLabel>{user ? "NEW PASSWORD (leave blank to keep current)" : "PASSWORD"}</FLabel>
           <div style={{ position:"relative" }}>
-            <input type={showPwd?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} placeholder={user?"••••••••":"Create password"} style={{...Inp(), paddingRight:40}}/>
+            <input type={showPwd?"text":"password"} value={password} onChange={e=>{setPassword(e.target.value);setPwdError("");}} placeholder={user?"••••••••":"Min 6 characters"} style={{...Inp(), paddingRight:40, border:`1px solid ${pwdError ? "#f8514960" : C.bdr}`}}/>
             <button onClick={()=>setShowPwd(!showPwd)} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:16 }}>
               {showPwd?"🙈":"👁"}
             </button>
           </div>
+          {pwdError && <div style={{fontSize:10,color:"#f85149",marginTop:3}}>{pwdError}</div>}
         </div>
         <div style={{ marginBottom:20 }}>
           <FLabel>ROLE</FLabel>

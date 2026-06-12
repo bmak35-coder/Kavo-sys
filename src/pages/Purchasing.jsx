@@ -5,6 +5,7 @@ import { useFirebaseServices } from "../firebase/FirebaseServicesProvider";
 import { SupplierService, PurchaseOrderService, PO_STATUSES, PO_STATUS_CFG } from "../db/services/purchasing.js";
 import { InventoryService } from "../db/services/inventory.js";
 import { useLang } from "../i18n/LanguageContext.jsx";
+import { isValidPhone, isValidEmail, isPositive, isNonNeg, MSG } from "../utils/validate.js";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Purchasing & Suppliers  ·  v1.0
@@ -475,8 +476,13 @@ function POFormModal({ po, suppliers, invItems, onSave, onClose }) {
 
   const save=()=>{
     if(!supplierId){alert("Select a supplier");return;}
-    if(items.filter(i=>i.inventoryItemId).length===0){alert("Add at least one item");return;}
-    onSave({supplierId,supplierName,orderDate,deliveryDate,notes,items:items.filter(i=>i.inventoryItemId),_isNew:isNew});
+    const validItems=items.filter(i=>i.inventoryItemId);
+    if(validItems.length===0){alert("Add at least one item");return;}
+    const badQty=validItems.find(i=>!isPositive(i.qty));
+    if(badQty){alert(`Qty for "${badQty.inventoryItemName||"item"}" must be greater than 0`);return;}
+    const badCost=validItems.find(i=>!isNonNeg(i.unitCost));
+    if(badCost){alert(`Unit cost for "${badCost.inventoryItemName||"item"}" must be 0 or greater`);return;}
+    onSave({supplierId,supplierName,orderDate,deliveryDate,notes,items:validItems,_isNew:isNew});
   };
 
   return (
@@ -607,6 +613,18 @@ function PODetailModal({ poId, onClose, onReceive, onCancel, onEdit, useFirebase
   );
 }
 
+/* ── SUPPLIER FIELD (must be outside SupplierFormModal to avoid remount on re-render) ──*/
+function SupplierField({ label, value, onChange, type="text", ph="", error="" }) {
+  return (
+    <div style={{marginBottom:11}}>
+      <Label>{label}</Label>
+      <input type={type} value={value} onChange={onChange} placeholder={ph}
+        style={{...Inp, border:`1px solid ${error ? "#f8514960" : C.bdr}`}}/>
+      {error && <div style={{fontSize:10,color:"#f85149",marginTop:3}}>{error}</div>}
+    </div>
+  );
+}
+
 /* ── SUPPLIER FORM MODAL ─────────────────────────────*/
 function SupplierFormModal({ supplier, onSave, onDelete, onClose }) {
   const [f,setF] = useState({
@@ -618,21 +636,25 @@ function SupplierFormModal({ supplier, onSave, onDelete, onClose }) {
     notes:         supplier?.notes||"",
     status:        supplier?.status||"active",
   });
-  const set=(k,v)=>setF(p=>({...p,[k]:v}));
-  const F=({label,k,type="text",ph=""})=>(
-    <div style={{marginBottom:11}}>
-      <Label>{label}</Label>
-      <input type={type} value={f[k]||""} onChange={e=>set(k,e.target.value)} placeholder={ph} style={Inp}/>
-    </div>
-  );
+  const [errors, setErrors] = useState({});
+  const set=(k,v)=>{ setF(p=>({...p,[k]:v})); setErrors(e=>({...e,[k]:undefined})); };
+
+  const validate=()=>{
+    const errs={};
+    if(!f.name.trim())         errs.name  = MSG.required;
+    if(!isValidPhone(f.phone)) errs.phone = MSG.phone;
+    if(!isValidEmail(f.email)) errs.email = MSG.email;
+    return errs;
+  };
+
   return (
     <PuModal title={supplier?"Edit Supplier":"New Supplier"} onClose={onClose}>
-      <F label="SUPPLIER NAME *" k="name" ph="e.g. Fresh Foods Co."/>
-      <F label="CONTACT PERSON"  k="contactPerson" ph="Contact name"/>
-      <F label="PHONE"           k="phone" ph="+961 1 000 000"/>
-      <F label="EMAIL"           k="email" type="email" ph="supplier@example.com"/>
-      <F label="ADDRESS"         k="address" ph="Street, City"/>
-      <F label="NOTES"           k="notes" ph="Any notes…"/>
+      <SupplierField label="SUPPLIER NAME *" value={f.name||""}          onChange={e=>set("name",e.target.value)}          ph="e.g. Fresh Foods Co."    error={errors.name}/>
+      <SupplierField label="CONTACT PERSON"  value={f.contactPerson||""} onChange={e=>set("contactPerson",e.target.value)} ph="Contact name"/>
+      <SupplierField label="PHONE"           value={f.phone||""}         onChange={e=>set("phone",e.target.value)}          ph="+961 1 000 000"          error={errors.phone}/>
+      <SupplierField label="EMAIL"           value={f.email||""}         onChange={e=>set("email",e.target.value)}          ph="supplier@example.com" type="email" error={errors.email}/>
+      <SupplierField label="ADDRESS"         value={f.address||""}       onChange={e=>set("address",e.target.value)}        ph="Street, City"/>
+      <SupplierField label="NOTES"           value={f.notes||""}         onChange={e=>set("notes",e.target.value)}          ph="Any notes…"/>
       <div style={{marginBottom:14}}>
         <Label>STATUS</Label>
         <div style={{display:"flex",gap:8}}>
@@ -645,7 +667,7 @@ function SupplierFormModal({ supplier, onSave, onDelete, onClose }) {
         </div>
       </div>
       <div style={{display:"flex",gap:8}}>
-        <button className="pu-btn" onClick={()=>{ if(!f.name.trim()){alert("Name required");return;} onSave(f); }} style={{...Btn(C.acc),flex:1}}>Save</button>
+        <button className="pu-btn" onClick={()=>{ const errs=validate(); if(Object.keys(errs).length){setErrors(errs);return;} onSave(f); }} style={{...Btn(C.acc),flex:1}}>Save</button>
         <button className="pu-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>
         {onDelete&&<button className="pu-btn" onClick={onDelete} style={Btn(C.danger,"#fff")}>🗑</button>}
       </div>

@@ -11,6 +11,7 @@ import {
   EmployeeService, AdvanceService, PayrollService,
   yearMonth, monthLabel,
 } from "../db/services/payroll.js";
+import { isValidPhone, isNonNeg, MSG } from "../utils/validate.js";
 
 // ── Colours (matches KAVO-SYS dark theme) ─────────────────────────────
 const C = {
@@ -94,11 +95,21 @@ function EmployeeModal({ emp, onSave, onClose }) {
     status:        emp?.status        || "active",
     notes:         emp?.notes         || "",
   });
-  const set = useCallback((k, v) => setF(p => ({ ...p, [k]: v })), []);
+  const [errors, setErrors] = useState({});
+  const set = useCallback((k, v) => { setF(p => ({ ...p, [k]: v })); setErrors(e => ({...e,[k]:undefined})); }, []);
   const [saving, setSaving] = useState(false);
 
+  function validate() {
+    const errs = {};
+    if (!f.name.trim())             errs.name          = MSG.required;
+    if (!isValidPhone(f.phone))     errs.phone         = MSG.phone;
+    if (f.monthlySalary !== "" && !isNonNeg(f.monthlySalary)) errs.monthlySalary = MSG.nonNeg;
+    return errs;
+  }
+
   async function save() {
-    if (!f.name.trim()) { alert("Name is required"); return; }
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true);
     try { await onSave({ ...emp, ...f }); }
     finally { setSaving(false); }
@@ -116,7 +127,9 @@ function EmployeeModal({ emp, onSave, onClose }) {
           <div style={{ gridColumn:"span 2" }}>
             <Label>FULL NAME *</Label>
             <input value={f.name} onChange={e=>set("name",e.target.value)}
-              placeholder="e.g. Sara Ahmad" autoFocus style={inputStyle()}/>
+              placeholder="e.g. Sara Ahmad" autoFocus
+              style={{...inputStyle(), border:`1px solid ${errors.name ? "#f8514960" : C.bdr}`}}/>
+            {errors.name && <div style={{fontSize:10,color:"#f85149",marginTop:3}}>{errors.name}</div>}
           </div>
           <div>
             <Label>ROLE</Label>
@@ -137,14 +150,16 @@ function EmployeeModal({ emp, onSave, onClose }) {
           <div>
             <Label>PHONE</Label>
             <input value={f.phone} onChange={e=>set("phone",e.target.value)}
-              placeholder="+961..." style={inputStyle()}/>
+              placeholder="+961..." style={{...inputStyle(), border:`1px solid ${errors.phone ? "#f8514960" : C.bdr}`}}/>
+            {errors.phone && <div style={{fontSize:10,color:"#f85149",marginTop:3}}>{errors.phone}</div>}
           </div>
           <div>
             <Label>MONTHLY SALARY ($)</Label>
             <input type="number" min="0" step="0.01" value={f.monthlySalary}
               onChange={e=>set("monthlySalary",e.target.value)}
               placeholder="0.00"
-              style={{...inputStyle(), fontFamily:"'JetBrains Mono',monospace"}}/>
+              style={{...inputStyle(), fontFamily:"'JetBrains Mono',monospace", border:`1px solid ${errors.monthlySalary ? "#f8514960" : C.bdr}`}}/>
+            {errors.monthlySalary && <div style={{fontSize:10,color:"#f85149",marginTop:3}}>{errors.monthlySalary}</div>}
           </div>
           <div>
             <Label>HIRE DATE</Label>

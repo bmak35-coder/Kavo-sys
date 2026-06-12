@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+﻿import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { ActivityLogService, LOG_CATEGORIES, LOG_ACTION } from "../db/services/activityLog.js";
+import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
+import { useTenant } from "../contexts/TenantProvider.jsx";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Activity Logs & Audit Trail  ·  v1.0
-   Admin-only · Offline-first · IndexedDB
+   Admin-only · Firebase + IndexedDB (offline-first)
 ══════════════════════════════════════════════════════ */
 
 const C = {
@@ -34,6 +36,11 @@ const ALL_ACTIONS = Object.entries(LOG_ACTION).map(([k,v]) => ({
 export default function ActivityLogs({ onBack }) {
   const { user } = useAuth();
 
+  // Firebase integration
+  const firebaseServices = useFirebaseServices();
+  const { tenantId } = useTenant();
+  const useFirebase = !!tenantId && !!firebaseServices;
+
   const [logs,          setLogs]          = useState([]);
   const [users,         setUsers]         = useState([]);
   const [totalCount,    setTotalCount]    = useState(0);
@@ -55,20 +62,28 @@ export default function ActivityLogs({ onBack }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [allLogs, count] = await Promise.all([
-        ActivityLogService.getAll(1000),
-        ActivityLogService.getCount(),
-      ]);
+      let allLogs, count;
+      if (useFirebase) {
+        [allLogs, count] = await Promise.all([
+          firebaseServices.auditLogs.getAll(1000),
+          firebaseServices.auditLogs.getCount(),
+        ]);
+      } else {
+        [allLogs, count] = await Promise.all([
+          ActivityLogService.getAll(1000),
+          ActivityLogService.getCount(),
+        ]);
+      }
       setLogs(safeArr(allLogs));
       setTotalCount(count);
 
       // Extract unique users from logs for filter
       const userMap = {};
-      allLogs.forEach(l => { if(l.userId && l.userName) userMap[l.userId]=l.userName; });
+      safeArr(allLogs).forEach(l => { if(l.userId && l.userName) userMap[l.userId]=l.userName; });
       setUsers(Object.entries(userMap).map(([id,name])=>({id,name})));
     } catch(e){ console.error(e); }
     setLoading(false);
-  }, []);
+  }, [useFirebase, firebaseServices]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -102,7 +117,7 @@ export default function ActivityLogs({ onBack }) {
 
   // ── Export ────────────────────────────────────────
   const exportCSV = () => {
-    const csv = ActivityLogService.toCSV(visible);
+    const csv = useFirebase ? firebaseServices.auditLogs.toCSV(visible) : ActivityLogService.toCSV(visible);
     const blob = new Blob(["\uFEFF"+csv], { type:"text/csv;charset=utf-8;" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -115,7 +130,7 @@ export default function ActivityLogs({ onBack }) {
   const doClear = async () => {
     if (clearText !== "CLEAR") return;
     setClearing(true);
-    await ActivityLogService.clearAll();
+    if (useFirebase) { await firebaseServices.auditLogs.clearAll(); } else { await ActivityLogService.clearAll(); }
     setLogs([]); setTotalCount(0); setUsers([]);
     setShowClear(false); setClearText(""); setClearing(false);
     showToast("All logs cleared", "warn");

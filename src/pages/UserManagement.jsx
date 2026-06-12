@@ -47,8 +47,8 @@ function FLabel({ children }) {
 // ── Password strength helper ───────────────────────────────────────────
 function pwStrength(pw) {
   if (!pw) return { level:0, label:"", col:C.muted };
-  if (pw.length < 4) return { level:1, label:"Too short", col:C.danger };
-  if (pw.length < 7) return { level:2, label:"Weak",      col:C.warn };
+  if (pw.length < 6) return { level:1, label:"Too short (min 6)", col:C.danger };
+  if (pw.length < 8) return { level:2, label:"Weak",              col:C.warn };
   if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) return { level:4, label:"Strong", col:C.success };
   return { level:3, label:"Good", col:C.info };
 }
@@ -76,7 +76,7 @@ function UserModal({ user, onSave, onClose, currentUserId }) {
     if (!f.name.trim())     { alert("Display name is required"); return; }
     if (!isEdit && !f.password) { alert("Password is required for new users"); return; }
     if (f.password && f.password !== f.confirmPw) { alert("Passwords do not match"); return; }
-    if (f.password && f.password.length < 4) { alert("Password must be at least 4 characters"); return; }
+    if (f.password && f.password.length < 6) { alert("Password must be at least 6 characters"); return; }
     setSaving(true);
     try { await onSave(f); }
     finally { setSaving(false); }

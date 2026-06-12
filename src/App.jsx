@@ -385,6 +385,8 @@ function SuperAdminArea() {
   const [error, setError] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
   const [claims, setClaims] = useState(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(false);
   const { t } = useLang();
 
   // Listen to auth state changes
@@ -393,17 +395,30 @@ function SuperAdminArea() {
       if (firebaseUser) {
         try {
           const { getIdTokenResult } = await import('firebase/auth');
-          const tokenResult = await getIdTokenResult(firebaseUser);
+          const tokenResult = await getIdTokenResult(firebaseUser, true);
           setClaims(tokenResult.claims);
+
+          // Primary check: Firebase custom claim
+          if (tokenResult.claims.role === 'admin') {
+            setIsSuperAdmin(true);
+          } else {
+            // Fallback: check Firestore superAdmins collection (no Cloud Functions needed)
+            const { doc: fsDoc, getDoc } = await import('firebase/firestore');
+            const saDoc = await getDoc(fsDoc(db, 'superAdmins', firebaseUser.uid));
+            setIsSuperAdmin(saDoc.exists() && saDoc.data()?.role === 'admin');
+          }
+
           setUser(firebaseUser);
         } catch (err) {
           console.error('Error getting claims:', err);
           setUser(null);
           setClaims(null);
+          setIsSuperAdmin(false);
         }
       } else {
         setUser(null);
         setClaims(null);
+        setIsSuperAdmin(false);
       }
       setLoading(false);
     });
@@ -546,17 +561,42 @@ function SuperAdminArea() {
   }
 
   // User is authenticated - check if they're a super admin
-  if (claims && claims.role === 'admin') {
+  if (isSuperAdmin) {
     return <SuperAdminDashboard />;
   }
 
-  // Not a super admin
+  // Not a super admin yet
   const handleLogout = async () => {
     try {
       await auth.signOut();
     } catch (err) {
       console.error('Logout error:', err);
     }
+  };
+
+  const handleBootstrap = async () => {
+    setBootstrapping(true);
+    try {
+      const { doc: fsDoc, setDoc, collection: fsCol, getDocs } = await import('firebase/firestore');
+      // Only allow if no super admins exist yet (first-time setup)
+      const existing = await getDocs(fsCol(db, 'superAdmins'));
+      if (!existing.empty) {
+        alert('Super admin already exists. Contact your system administrator.');
+        setBootstrapping(false);
+        return;
+      }
+      await setDoc(fsDoc(db, 'superAdmins', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        role: 'admin',
+        createdAt: new Date().toISOString(),
+      });
+      setIsSuperAdmin(true);
+    } catch (err) {
+      console.error('Bootstrap error:', err);
+      alert('Failed to set up super admin: ' + err.message);
+    }
+    setBootstrapping(false);
   };
 
   return (
@@ -575,16 +615,36 @@ function SuperAdminArea() {
           <br />
           Logged in as: <strong style={{ color:"#58a6ff" }}>{user.email}</strong>
         </div>
-        <button
-          onClick={handleLogout}
-          style={{
-            padding:"12px 24px", background:"#21262d", border:"1px solid #30363d",
-            borderRadius:8, color:"#c9d1d9", fontSize:14, fontWeight:600,
-            cursor:"pointer", fontFamily:"inherit"
-          }}
-        >
-          Sign Out
-        </button>
+        <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
+          <button
+            onClick={handleBootstrap}
+            disabled={bootstrapping}
+            style={{
+              padding:"12px 24px", background: bootstrapping ? "#1a2540" : "#f0a500",
+              border:"none", borderRadius:8,
+              color: bootstrapping ? "#4a6080" : "#000",
+              fontSize:14, fontWeight:700,
+              cursor: bootstrapping ? "not-allowed" : "pointer",
+              fontFamily:"inherit"
+            }}
+          >
+            {bootstrapping ? "Setting up..." : "Set as Super Admin (First Time Setup)"}
+          </button>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding:"12px 24px", background:"#21262d", border:"1px solid #30363d",
+              borderRadius:8, color:"#c9d1d9", fontSize:14, fontWeight:600,
+              cursor:"pointer", fontFamily:"inherit"
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
+        <div style={{ marginTop:16, fontSize:11, color:"#3a4a60", maxWidth:380 }}>
+          First time setup: click the button above to grant super admin access to this account.
+          The button is disabled once a super admin already exists.
+        </div>
       </div>
     </div>
   );

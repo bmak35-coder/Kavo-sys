@@ -47,6 +47,7 @@ import SystemHealth               from "./pages/SystemHealth.jsx";
 import Payroll                    from "./pages/Payroll.jsx";
 import UserManagement             from "./pages/UserManagement.jsx";
 import Tables                     from "./pages/Tables.jsx";
+import PublicTenantMenu           from "./pages/PublicTenantMenu.jsx";
 import { BackupService }          from "./db/services/backup.js";
 
 // ── Design tokens (no external imports) ───────────────────────────────
@@ -169,13 +170,13 @@ function AdminHome({ onNavigate, onLogout, userName }) {
     { id:"menu",      icon:"🍽", label:t("menu"),       desc:t("menuDesc"),       col:"#a78bfa" },
     { id:"purchasing",icon:"📋", label:t("purchasing"), desc:t("purchasingDesc"), col:"#34d399" },
     { id:"settings",  icon:"⚙", label:t("settings"),   desc:t("settingsDesc"),   col:"#7d8fa0" },
-    { id:"payroll",   icon:"💼", label:"Payroll",      desc:"Staff salaries & advances", col:"#f59e0b" },
-    { id:"users",     icon:"👥", label:"Users",        desc:"Manage staff accounts & roles", col:"#a78bfa" },
-    { id:"migration", icon:"🔄", label:"Migration",    desc:"Migrate to Firebase multi-tenant", col:"#8b5cf6" },
+    { id:"payroll",   icon:"💼", label:t("payrollTile"),   desc:t("payrollTileDesc"),   col:"#f59e0b" },
+    { id:"users",     icon:"👥", label:t("usersTile"),     desc:t("usersTileDesc"),     col:"#a78bfa" },
+    { id:"migration", icon:"🔄", label:t("migrationTile"), desc:t("migrationTileDesc"), col:"#8b5cf6" },
     {
       id:"data", icon:"💾", label:t("backup"), col:"#f472b6",
       desc: bkpStatus === "never" ? "⚠ " + t("backupDesc") + " (!)"
-          : bkpStatus === "warn"  ? "⚠ Backup overdue (7d+)"
+          : bkpStatus === "warn"  ? t("backupOverdueShort")
           : t("backupDesc"),
       badge: bkpStatus === "never" || bkpStatus === "warn",
     },
@@ -254,15 +255,15 @@ function AccessDenied({ onBack }) {
                   alignItems:"center", justifyContent:"center", gap:16,
                   fontFamily:"system-ui,-apple-system,sans-serif" }}>
       <div style={{ fontSize:48 }}>🚫</div>
-      <div style={{ fontWeight:800, color:"#f85149", fontSize:20 }}>Access Denied</div>
+      <div style={{ fontWeight:800, color:"#f85149", fontSize:20 }}>{t("accessDenied")}</div>
       <div style={{ fontSize:13, color:C.muted, maxWidth:320, textAlign:"center" }}>
-        You do not have permission to access this page. Contact your manager.
+        {t("accessDeniedMsg")}
       </div>
       <button onClick={onBack}
         style={{ background:C.acc, color:"#000", border:"none", borderRadius:10,
                  padding:"10px 28px", fontWeight:700, fontSize:13,
                  cursor:"pointer", fontFamily:"inherit", marginTop:8 }}>
-        ← Back to Home
+        {t("backToHome")}
       </button>
     </div>
   );
@@ -341,7 +342,7 @@ function KitchenHome({ onNavigate, onLogout, userName }) {
         <span style={{ fontWeight:900, fontSize:20, color:C.acc, letterSpacing:".07em" }}>
           KAVO<span style={{ color:C.text, opacity:.3 }}>-SYS</span>
         </span>
-        <span style={{ fontSize:10, fontWeight:800, color:C.muted, letterSpacing:".1em" }}>KITCHEN</span>
+        <span style={{ fontSize:10, fontWeight:800, color:C.muted, letterSpacing:".1em" }}>{t("kitchen")}</span>
         <div style={{ flex:1 }}/>
         <LangSwitcher/>
         <span style={{ fontSize:12, color:C.muted }}>🍳 {userName}</span>
@@ -442,7 +443,7 @@ function SuperAdminArea() {
     const handleLogin = async (e) => {
       e.preventDefault();
       if (!email.trim() || !password) {
-        setError("Please enter your email and password");
+        setError(t("enterUsernamePassword"));
         return;
       }
       setLoggingIn(true);
@@ -512,7 +513,7 @@ function SuperAdminArea() {
                   type={showPwd ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={t("enterYourPassword")}
                   style={{
                     width: "100%", padding: "12px 14px",
                     background: "#060a14", border: "1px solid #1a2540",
@@ -662,6 +663,7 @@ function TenantApp({ token }) {
 
 function TenantAppContent() {
   const { tenant, loading, error } = useTenant();
+  const { t } = useLang();
   const [tenantUser, setTenantUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   
@@ -689,7 +691,7 @@ function TenantAppContent() {
                     flexDirection:"column", gap:16,
                     fontFamily:"system-ui,-apple-system,sans-serif" }}>
         <div style={{ fontSize:40 }}>⚡</div>
-        <div style={{ fontWeight:800, color:C.acc, fontSize:18 }}>Loading tenant...</div>
+        <div style={{ fontWeight:800, color:C.acc, fontSize:18 }}>{t("loadingTenant")}</div>
       </div>
     );
   }
@@ -701,9 +703,9 @@ function TenantAppContent() {
                     flexDirection:"column", gap:16,
                     fontFamily:"system-ui,-apple-system,sans-serif" }}>
         <div style={{ fontSize:48 }}>🚫</div>
-        <div style={{ fontWeight:800, color:"#f85149", fontSize:20 }}>Tenant Not Found</div>
+        <div style={{ fontWeight:800, color:"#f85149", fontSize:20 }}>{t("tenantNotFound")}</div>
         <div style={{ fontSize:13, color:C.muted, maxWidth:320, textAlign:"center" }}>
-          {error || 'This restaurant is not active or does not exist.'}
+          {error || t("restaurantNotActive")}
         </div>
       </div>
     );
@@ -770,18 +772,18 @@ function TenantHome({ tenant, user, onNavigate, onLogout }) {
   // Role-based tiles
   const getTiles = () => {
     const allTiles = [
-      { id:"pos",       icon:"🛒", label:"POS",           desc:"Orders & payments",     col:"#f0a500", roles:["owner","admin","manager","cashier"] },
-      { id:"kitchen",   icon:"🍳", label:"Kitchen",       desc:"Kitchen display",       col:"#3fb950", roles:["owner","admin","manager","cashier","kitchen"] },
-      { id:"tables",    icon:"🪑", label:"Tables",        desc:"Floor plan & status",   col:"#a78bfa", roles:["owner","admin","manager"] },
-      { id:"inventory", icon:"📦", label:"Inventory",     desc:"Stock management",      col:"#58a6ff", roles:["owner","admin","manager"] },
-      { id:"reports",   icon:"📊", label:"Reports",       desc:"Sales & analytics",     col:"#a371f7", roles:["owner","admin","manager"] },
-      { id:"menu",      icon:"🍽",  label:"Menu",          desc:"Items & modifiers",     col:"#f778ba", roles:["owner","admin"] },
-      { id:"purchasing", icon:"🚚", label:"Purchasing",   desc:"Suppliers & POs",       col:"#85e89d", roles:["owner","admin"] },
-      { id:"settings",  icon:"⚙️", label:"Settings",      desc:"Business & security",   col:"#ffab70", roles:["owner","admin"] },
-      { id:"users",     icon:"👥", label:"Users",         desc:"Manage staff accounts & roles", col:"#7ee8fa", roles:["owner","admin"] },
-      { id:"payroll",   icon:"💰", label:"Payroll",       desc:"Staff salaries & advances", col:"#ffdf5d", roles:["owner","admin"] },
-      { id:"data",      icon:"💾", label:"Backup",        desc:"⚠️ Export & restore (I)", col:"#d29922", roles:["owner","admin"] },
-      { id:"health",    icon:"🔧", label:"System Health", desc:"Diagnostics & status",  col:"#6e7681", roles:["owner","admin"] },
+      { id:"pos",       icon:"🛒", label:t("pos"),          desc:t("posDesc"),          col:"#f0a500", roles:["owner","admin","manager","cashier"] },
+      { id:"kitchen",   icon:"🍳", label:t("kitchenTile"),  desc:t("kitchenDesc"),      col:"#3fb950", roles:["owner","admin","manager","cashier","kitchen"] },
+      { id:"tables",    icon:"🪑", label:t("tablesTile"),   desc:t("tablesTileDesc"),   col:"#a78bfa", roles:["owner","admin","manager"] },
+      { id:"inventory", icon:"📦", label:t("inventory"),    desc:t("inventoryDesc"),    col:"#58a6ff", roles:["owner","admin","manager"] },
+      { id:"reports",   icon:"📊", label:t("reports"),      desc:t("reportsDesc"),      col:"#a371f7", roles:["owner","admin","manager"] },
+      { id:"menu",      icon:"🍽",  label:t("menu"),         desc:t("menuDesc"),         col:"#f778ba", roles:["owner","admin"] },
+      { id:"purchasing",icon:"🚚", label:t("purchasing"),   desc:t("purchasingDesc"),   col:"#85e89d", roles:["owner","admin"] },
+      { id:"settings",  icon:"⚙️", label:t("settings"),     desc:t("settingsDesc"),     col:"#ffab70", roles:["owner","admin"] },
+      { id:"users",     icon:"👥", label:t("usersTile"),    desc:t("usersTileDesc"),    col:"#7ee8fa", roles:["owner","admin"] },
+      { id:"payroll",   icon:"💰", label:t("payrollTile"),  desc:t("payrollTileDesc"),  col:"#ffdf5d", roles:["owner","admin"] },
+      { id:"data",      icon:"💾", label:t("backup"),       desc:t("backupDesc"),       col:"#d29922", roles:["owner","admin"] },
+      { id:"health",    icon:"🔧", label:t("health"),       desc:t("healthDesc"),       col:"#6e7681", roles:["owner","admin"] },
     ];
     return allTiles.filter(tile => tile.roles.includes(user.role));
   };
@@ -868,7 +870,7 @@ function TenantLogin({ tenant, onLogin }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!username.trim() || !password) {
-      setError("Please enter your username and password");
+      setError(t("enterUsernamePassword"));
       return;
     }
     setLoading(true);
@@ -961,22 +963,22 @@ function TenantLogin({ tenant, onLogin }) {
             {tenant.name}
           </div>
           <div style={{ fontSize: 13, color: "#4a6080" }}>
-            Point of Sale System
+            {t("pointOfSaleSystem")}
           </div>
         </div>
 
         <form onSubmit={handleLogin}>
           {/* Username/Email Input */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 800, 
+            <label style={{ display: "block", fontSize: 11, fontWeight: 800,
                            color: "#4a6080", letterSpacing: ".05em", marginBottom: 6 }}>
-              EMAIL / USERNAME
+              {t("emailUsernameLabel")}
             </label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username or email"
+              placeholder={t("enterUsernameOrEmail")}
               style={{
                 width: "100%", padding: "12px 14px",
                 background: "#060a14", border: "1px solid #1a2540",
@@ -990,14 +992,14 @@ function TenantLogin({ tenant, onLogin }) {
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 800,
                            color: "#4a6080", letterSpacing: ".05em", marginBottom: 6 }}>
-              PASSWORD
+              {t("password").toUpperCase()}
             </label>
             <div style={{ position: "relative" }}>
               <input
                 type={showPwd ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder={t("enterYourPassword")}
                 style={{
                   width: "100%", padding: "12px 14px",
                   background: "#060a14", border: "1px solid #1a2540",
@@ -1044,7 +1046,7 @@ function TenantLogin({ tenant, onLogin }) {
               fontFamily: "inherit",
             }}
           >
-            {loading ? "Signing in..." : "Sign In →"}
+            {loading ? t("loggingIn") : t("signInBtn")}
           </button>
         </form>
       </div>
@@ -1055,39 +1057,38 @@ function TenantLogin({ tenant, onLogin }) {
 // ── Main Router ────────────────────────────────────────────────────────
 function Router() {
   const { user, logout, can } = useAuth();
+
+  const resolvePathState = (pathname) => {
+    const segments = pathname.split('/').filter(Boolean);
+    const knownRoutes = ['migration', 'kitchen', 'pos', 'inventory', 'reports',
+                         'menu', 'settings', 'data', 'health', 'users', 'payroll', 'purchasing'];
+
+    if (segments.length === 0) {
+      return { view: 'home', tenantToken: null };
+    }
+
+    if (segments[0] === 'admin') {
+      return { view: 'admin', tenantToken: null };
+    }
+
+    if (segments.length === 1 && knownRoutes.includes(segments[0])) {
+      return { view: segments[0], tenantToken: null };
+    }
+
+    if (segments.length >= 2 && segments[1] === 'menu') {
+      return { view: 'tenant-menu', tenantToken: segments[0] };
+    }
+
+    return { view: 'tenant', tenantToken: segments[0] };
+  };
   
   // URL-based routing with tenant token support
   const [view, setView] = useState(() => {
-    const path = window.location.pathname.slice(1); // Remove leading /
-    
-    // Check if path is admin
-    if (path === 'admin' || path.startsWith('admin/')) {
-      return 'admin';
-    }
-    
-    // Check if path is a known route
-    const knownRoutes = ['migration', 'kitchen', 'pos', 'inventory', 'reports', 
-                         'menu', 'settings', 'data', 'health', 'users', 'payroll', 'purchasing'];
-    if (knownRoutes.includes(path)) {
-      return path;
-    }
-    
-    // If path exists and is not a known route, assume it's a tenant token
-    if (path && path.length > 0) {
-      return 'tenant';
-    }
-    
-    return 'home';
+    return resolvePathState(window.location.pathname).view;
   });
   
   const [tenantToken, setTenantToken] = useState(() => {
-    const path = window.location.pathname.slice(1);
-    const knownRoutes = ['admin', 'migration', 'kitchen', 'pos', 'inventory', 'reports', 
-                         'menu', 'settings', 'data', 'health', 'users', 'payroll', 'purchasing'];
-    if (path && !knownRoutes.includes(path) && !path.startsWith('admin/')) {
-      return path;
-    }
-    return null;
+    return resolvePathState(window.location.pathname).tenantToken;
   });
 
   // Update URL when view changes
@@ -1095,6 +1096,8 @@ function Router() {
     let path = '/';
     if (view === 'tenant' && tenantToken) {
       path = `/${tenantToken}`;
+    } else if (view === 'tenant-menu' && tenantToken) {
+      path = `/${tenantToken}/menu`;
     } else if (view === 'admin') {
       path = '/admin';
     } else if (view !== 'home') {
@@ -1109,33 +1112,9 @@ function Router() {
   // Handle browser back/forward
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname.slice(1);
-      
-      if (path === 'admin' || path.startsWith('admin/')) {
-        setView('admin');
-        setTenantToken(null);
-      } else if (path === 'migration') {
-        setView('migration');
-        setTenantToken(null);
-      } else if (path === 'kitchen') {
-        setView('kitchen');
-        setTenantToken(null);
-      } else if (path === 'pos') {
-        setView('pos');
-        setTenantToken(null);
-      } else {
-        const knownRoutes = ['inventory', 'reports', 'menu', 'settings', 'data', 'health', 'users', 'payroll', 'purchasing'];
-        if (knownRoutes.includes(path)) {
-          setView(path);
-          setTenantToken(null);
-        } else if (path && path.length > 0) {
-          setView('tenant');
-          setTenantToken(path);
-        } else {
-          setView('home');
-          setTenantToken(null);
-        }
-      }
+      const state = resolvePathState(window.location.pathname);
+      setView(state.view);
+      setTenantToken(state.tenantToken);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -1149,6 +1128,15 @@ function Router() {
   // Tenant-specific POS - /:token route
   if (view === 'tenant' && tenantToken) {
     return <TenantApp token={tenantToken} />;
+  }
+
+  // Tenant public menu - /:token/menu route
+  if (view === 'tenant-menu' && tenantToken) {
+    return (
+      <TenantProvider token={tenantToken}>
+        <PublicTenantMenu />
+      </TenantProvider>
+    );
   }
 
   if (!user) return <Login/>;

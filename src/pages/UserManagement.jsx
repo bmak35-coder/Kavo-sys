@@ -55,6 +55,7 @@ function pwStrength(pw) {
 
 // ── User Form Modal ────────────────────────────────────────────────────
 function UserModal({ user, onSave, onClose, currentUserId }) {
+  const { t } = useLang();
   const isEdit = !!user?.id;
   const [f, setF] = useState({
     username:    user?.username || "",
@@ -72,11 +73,11 @@ function UserModal({ user, onSave, onClose, currentUserId }) {
   const pw = pwStrength(f.password);
 
   async function save() {
-    if (!f.username.trim()) { alert("Username is required"); return; }
-    if (!f.name.trim())     { alert("Display name is required"); return; }
-    if (!isEdit && !f.password) { alert("Password is required for new users"); return; }
-    if (f.password && f.password !== f.confirmPw) { alert("Passwords do not match"); return; }
-    if (f.password && f.password.length < 6) { alert("Password must be at least 6 characters"); return; }
+    if (!f.username.trim()) { alert(t("usernameRequired")); return; }
+    if (!f.name.trim())     { alert(t("displayNameRequired")); return; }
+    if (!isEdit && !f.password) { alert(t("passwordRequired")); return; }
+    if (f.password && f.password !== f.confirmPw) { alert(t("confirmPasswordLabel")); return; }
+    if (f.password && f.password.length < 6) { alert(t("passwordRequired")); return; }
     setSaving(true);
     try { await onSave(f); }
     finally { setSaving(false); }
@@ -92,22 +93,22 @@ function UserModal({ user, onSave, onClose, currentUserId }) {
                     width:500, maxWidth:"97vw", maxHeight:"92vh",
                     overflowY:"auto", padding:24 }}>
         <div style={{ fontWeight:800, color:C.text, fontSize:15, marginBottom:18 }}>
-          {isEdit ? "✏ Edit User" : "👤 New User Account"}
+          {isEdit ? t("editUserTitle") : t("newUserAccount")}
         </div>
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
           <div>
-            <FLabel>USERNAME *</FLabel>
+            <FLabel>{t("usernameRequired")}</FLabel>
             <input value={f.username} onChange={e=>set("username",e.target.value.toLowerCase().replace(/\s/g,""))}
               placeholder="e.g. sara" autoFocus style={inp()}/>
           </div>
           <div>
-            <FLabel>DISPLAY NAME *</FLabel>
+            <FLabel>{t("displayNameRequired")}</FLabel>
             <input value={f.name} onChange={e=>set("name",e.target.value)}
               placeholder="e.g. Sara Ahmad" style={inp()}/>
           </div>
           <div>
-            <FLabel>ROLE *</FLabel>
+            <FLabel>{t("roleRequired")}</FLabel>
             <select value={f.role} onChange={e=>set("role",e.target.value)}
               style={{...inp(), cursor:"pointer"}}>
               {ROLES.map(r => (
@@ -121,12 +122,12 @@ function UserModal({ user, onSave, onClose, currentUserId }) {
             <input type="checkbox" id="user-active" checked={f.active}
               onChange={e=>set("active",e.target.checked)}/>
             <label htmlFor="user-active" style={{ fontSize:12, color:C.muted, cursor:"pointer" }}>
-              Active (can log in)
+              {t("activeCanLogin")}
             </label>
           </div>
           {/* Password fields */}
           <div>
-            <FLabel>{isEdit ? "NEW PASSWORD (leave blank to keep)" : "PASSWORD *"}</FLabel>
+            <FLabel>{isEdit ? t("newPassHint") : t("passwordRequired")}</FLabel>
             <div style={{ position:"relative" }}>
               <input type={showPw?"text":"password"} value={f.password}
                 onChange={e=>set("password",e.target.value)}
@@ -150,14 +151,14 @@ function UserModal({ user, onSave, onClose, currentUserId }) {
             )}
           </div>
           <div>
-            <FLabel>CONFIRM PASSWORD</FLabel>
+            <FLabel>{t("confirmPasswordLabel")}</FLabel>
             <input type={showPw?"text":"password"} value={f.confirmPw}
               onChange={e=>set("confirmPw",e.target.value)}
               placeholder="Re-enter password"
               style={{...inp(), border:`1px solid ${f.confirmPw && f.password!==f.confirmPw ? C.danger+"60" : C.bdr}`}}/>
           </div>
           <div style={{ gridColumn:"span 2" }}>
-            <FLabel>NOTES (optional)</FLabel>
+            <FLabel>{t("notesOptional")}</FLabel>
             <input value={f.notes} onChange={e=>set("notes",e.target.value)}
               placeholder="e.g. Weekend shift, part-time…" style={inp()}/>
           </div>
@@ -169,31 +170,30 @@ function UserModal({ user, onSave, onClose, currentUserId }) {
           <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
             <span style={{ fontSize:14 }}>{roleInfo.icon}</span>
             <span style={{ fontWeight:700, color:roleInfo.color, fontSize:12 }}>
-              {ROLE_META[f.role]?.label} Permissions
+              {ROLE_META[f.role]?.label} {t("rolePermissions")}
             </span>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:4 }}>
             {[
-              ["POS Access",        "canAccessPOS"],
-              ["Kitchen Access",    "canAccessKitchen"],
-              ["Reports",           "canAccessReports"],
-              ["Inventory",         "canAccessInventory"],
-              ["Menu Management",   "canManageMenu"],
-              ["Payroll",           "canAccessPayroll"],
-              ["Purchasing",        "canManagePurchasing"],
-              ["Settings",          "canAccessSettings"],
-              ["Backup/Restore",    "canBackupRestore"],
-              ["Void Orders",       "canVoidOrders"],
-              ["Apply Discount",    "canApplyDiscount"],
-              ["Delete Data",       "canDeleteData"],
-              ["Manage Users",      "canManageUsers"],
+              [t("permAccessPOS"),       "canAccessPOS"],
+              [t("permAccessKitchen"),   "canAccessKitchen"],
+              [t("permAccessReports"),   "canAccessReports"],
+              [t("permInventoryAccess"), "canAccessInventory"],
+              [t("permManageMenu"),      "canManageMenu"],
+              [t("permPayrollAccess"),   "canAccessPayroll"],
+              [t("permPurchasingAccess"),"canManagePurchasing"],
+              [t("permAccessSettings"),  "canAccessSettings"],
+              [t("permBackupRestore"),   "canBackupRestore"],
+              [t("permVoidOrders"),      "canVoidOrders"],
+              [t("permApplyDiscount"),   "canApplyDiscount"],
+              [t("permDeleteData"),      "canDeleteData"],
+              [t("permManageUsers"),     "canManageUsers"],
             ].map(([label, key]) => (
               <div key={key} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11 }}>
                 <span style={{ color: perms[key] ? C.success : C.danger, fontWeight:700 }}>
                   {perms[key] ? "✓" : "✕"}
                 </span>
-                <span style={{ color: perms[key] ? C.muted : C.card===C.bdr ? "#2a3a50" : "#2a3a50" }}
-                      style={{ color: perms[key] ? C.sub : "#3a4a5a" }}>
+                <span style={{ color: perms[key] ? C.sub : "#3a4a5a" }}>
                   {label}
                 </span>
               </div>
@@ -207,13 +207,13 @@ function UserModal({ user, onSave, onClose, currentUserId }) {
             disabled={saving}
             style={{ ...btnStyle(C.acc,"#000"), flex:2 }}
           >
-            {saving ? "Saving..." : (isEdit ? "💾 Save Changes" : "👤 Create User")}
+            {saving ? t("savingLabel") : (isEdit ? t("saveChangesBtn") : t("createUserBtn"))}
           </button>
           <button
             onClick={onClose}
             style={{ ...ghostStyle(), flex:1 }}
           >
-            Cancel
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -259,9 +259,9 @@ export default function UserManagement({ onBack }) {
         const roleOrder = {owner:0,admin:0,manager:1,cashier:2,kitchen:3};
         return (roleOrder[a.role]??4) - (roleOrder[b.role]??4) || a.name.localeCompare(b.name);
       }));
-    } catch(e) { 
+    } catch(e) {
       console.error('Error loading users:', e);
-      showToast("Failed to load users","err"); 
+      showToast(t("failedLoadUsers"), "err");
     }
     setLoading(false);
   }, [useFirebase, firebaseServices]);
@@ -273,7 +273,7 @@ export default function UserManagement({ onBack }) {
     try {
       // Check username uniqueness
       const dup = users.find(u => u.username === form.username && u.id !== editUser?.id);
-      if (dup) { showToast("Username already exists","err"); return; }
+      if (dup) { showToast(t("usernameExists"), "err"); return; }
 
       const record = {
         id:       editUser?.id || "u_" + Date.now() + "_" + Math.random().toString(36).slice(2,5),
@@ -307,17 +307,17 @@ export default function UserManagement({ onBack }) {
       }
 
       setModal(null);
-      showToast(editUser ? "User updated" : "User created");
+      showToast(editUser ? t("userUpdated") : t("userCreated"));
       load();
     } catch(e) {
       console.error('Error saving user:', e);
-      showToast("Save failed: " + e.message, "err");
+      showToast(t("loadFailed") + e.message, "err");
     }
   }
 
   async function toggleActive(u) {
     if (u.id === currentUser?.id) {
-      showToast("You cannot deactivate yourself","err"); return;
+      showToast(t("cannotDeactivateSelf"), "err"); return;
     }
     try {
       console.log('Toggling user active status:', u.id, !u.active);
@@ -328,17 +328,17 @@ export default function UserManagement({ onBack }) {
         await safeDB(() => db.users.update(u.id, { active: !u.active }));
         console.log('User status updated in localStorage');
       }
-      showToast(u.active ? "User deactivated" : "User activated", u.active ? "warn" : "ok");
+      showToast(u.active ? t("userDeactivated") : t("userActivated"), u.active ? "warn" : "ok");
       load();
     } catch(e) {
       console.error('Error toggling user status:', e);
-      showToast("Update failed", "err");
+      showToast(t("updateFailed"), "err");
     }
   }
 
   async function deleteUser(id) {
     if (id === currentUser?.id) {
-      showToast("You cannot delete yourself","err"); setDelId(null); return;
+      showToast(t("cannotDeleteSelf"), "err"); setDelId(null); return;
     }
     try {
       console.log('Deleting user:', id);
@@ -350,11 +350,11 @@ export default function UserManagement({ onBack }) {
         console.log('User deleted from localStorage');
       }
       setDelId(null);
-      showToast("User deleted","warn");
+      showToast(t("userDeleted"), "warn");
       load();
     } catch(e) {
       console.error('Error deleting user:', e);
-      showToast("Delete failed", "err");
+      showToast(t("deleteFailed"), "err");
       setDelId(null);
     }
   }
@@ -390,20 +390,20 @@ export default function UserManagement({ onBack }) {
           <button onClick={onBack}
             style={{ background:"transparent", border:"none", color:C.muted,
                      fontSize:18, cursor:"pointer", padding:"0 4px" }}>←</button>
-          <span style={{ fontWeight:800, color:C.acc, fontSize:16 }}>👥 User Management</span>
+          <span style={{ fontWeight:800, color:C.acc, fontSize:16 }}>{t("userMgmtTitle")}</span>
         </div>
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
           <input value={search} onChange={e=>setSearch(e.target.value)}
-            placeholder="Search users…"
+            placeholder={t("searchUsersPlaceholder")}
             style={{...inp(), width:180, padding:"5px 10px", fontSize:12}}/>
           <button onClick={() => setModal({})}
             style={btnStyle(C.acc,"#000")}>
-            + New User
+            {t("newUserBtn")}
           </button>
           <button onClick={resetToDefaults}
             style={ghostStyle()}
             title="Reset to factory default users">
-            ↺ Defaults
+            {t("resetDefaultsBtn")}
           </button>
         </div>
       </header>
@@ -412,13 +412,13 @@ export default function UserManagement({ onBack }) {
       <div style={{ background:C.surf, borderBottom:`1px solid ${C.bdr}`,
                     padding:"6px 16px", display:"flex", gap:16, flexShrink:0 }}>
         {[
-          ["Total Users",    users.length,                    C.text],
-          ["Active",         users.filter(u=>u.active!==false).length, C.success],
-          ["Inactive",       users.filter(u=>u.active===false).length, C.muted],
-          ["Owners",         users.filter(u=>u.role==="owner"||u.role==="admin").length, C.acc],
-          ["Managers",       users.filter(u=>u.role==="manager").length, "#a78bfa"],
-          ["Cashiers",       users.filter(u=>u.role==="cashier").length, C.info],
-          ["Kitchen",        users.filter(u=>u.role==="kitchen").length, C.success],
+          [t("totalUsers"),    users.length,                    C.text],
+          [t("activeStatus"),  users.filter(u=>u.active!==false).length, C.success],
+          [t("inactiveStatus"),users.filter(u=>u.active===false).length, C.muted],
+          [t("ownersCount"),   users.filter(u=>u.role==="owner"||u.role==="admin").length, C.acc],
+          [t("managersCount"), users.filter(u=>u.role==="manager").length, "#a78bfa"],
+          [t("cashiersCount"), users.filter(u=>u.role==="cashier").length, C.info],
+          [t("kitchenCount"),  users.filter(u=>u.role==="kitchen").length, C.success],
         ].map(([label, count, col]) => (
           <div key={label} style={{ textAlign:"center", minWidth:60 }}>
             <div style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:800,
@@ -431,11 +431,11 @@ export default function UserManagement({ onBack }) {
       {/* Body */}
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
         {loading ? (
-          <div style={{ textAlign:"center", color:C.muted, padding:"40px 0" }}>Loading…</div>
+          <div style={{ textAlign:"center", color:C.muted, padding:"40px 0" }}>{t("loading")}</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign:"center", color:C.muted, padding:"60px 0" }}>
             <div style={{ fontSize:36, marginBottom:8 }}>👤</div>
-            {search ? "No users match your search." : "No users found."}
+            {search ? t("noUsersMatchSearch") : t("noUsersFound")}
           </div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
@@ -479,7 +479,7 @@ export default function UserManagement({ onBack }) {
                             </div>
                             <div>
                               <div style={{ fontWeight:700, color:C.text, fontSize:13 }}>
-                                {u.name} {isMe && <span style={{ fontSize:10, color:C.acc }}>← You</span>}
+                                {u.name} {isMe && <span style={{ fontSize:10, color:C.acc }}>{t("youIndicator")}</span>}
                               </div>
                               <div style={{ fontFamily:"'JetBrains Mono',monospace",
                                             fontSize:11, color:C.muted }}>
@@ -500,7 +500,7 @@ export default function UserManagement({ onBack }) {
                                            border: `1px solid ${inactive ? C.bdr : C.success+"40"}`,
                                            borderRadius:10, padding:"2px 8px",
                                            fontSize:9, fontWeight:700 }}>
-                              {inactive ? "○ INACTIVE" : "✓ ACTIVE"}
+                              {inactive ? t("inactiveStatus") : t("activeStatus")}
                             </span>
                           </div>
                         </div>
@@ -516,12 +516,12 @@ export default function UserManagement({ onBack }) {
                         {/* Permission pills (compact) */}
                         <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:10 }}>
                           {[
-                            ["POS",       "canAccessPOS"],
-                            ["Kitchen",   "canAccessKitchen"],
-                            ["Reports",   "canAccessReports"],
-                            ["Inventory", "canAccessInventory"],
-                            ["Payroll",   "canAccessPayroll"],
-                            ["Settings",  "canAccessSettings"],
+                            [t("permAccessPOS"),      "canAccessPOS"],
+                            [t("permAccessKitchen"),  "canAccessKitchen"],
+                            [t("permAccessReports"),  "canAccessReports"],
+                            [t("permInventoryAccess"),"canAccessInventory"],
+                            [t("permPayrollAccess"),  "canAccessPayroll"],
+                            [t("permAccessSettings"), "canAccessSettings"],
                           ].map(([label, key]) => {
                             const granted = PERMISSIONS[u.role]?.[key];
                             return (
@@ -541,7 +541,7 @@ export default function UserManagement({ onBack }) {
                         <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                           <button onClick={() => setModal(u)}
                             style={{...ghostStyle(), fontSize:11, padding:"4px 10px", flex:1}}>
-                            ✏ Edit
+                            {t("edit")}
                           </button>
                           <button
                             onClick={() => toggleActive(u)}
@@ -549,7 +549,7 @@ export default function UserManagement({ onBack }) {
                             style={{...ghostStyle(inactive?false:true),
                                     fontSize:11, padding:"4px 10px",
                                     opacity: isMe ? 0.4 : 1, flex:1 }}>
-                            {inactive ? "✓ Activate" : "○ Deactivate"}
+                            {inactive ? t("activateUserBtn") : t("deactivateUserBtn")}
                           </button>
                           <button
                             onClick={() => setDelId(u.id)}
@@ -585,15 +585,15 @@ export default function UserManagement({ onBack }) {
           <div style={{ background:C.surf, border:`1px solid ${C.bdr}`, borderRadius:12,
                         padding:22, maxWidth:320, width:"96vw", textAlign:"center" }}>
             <div style={{ fontSize:32, marginBottom:8 }}>🗑</div>
-            <div style={{ fontWeight:700, color:C.text, marginBottom:6 }}>Delete this user?</div>
+            <div style={{ fontWeight:700, color:C.text, marginBottom:6 }}>{t("deleteUserConfirm")}</div>
             <div style={{ fontSize:12, color:C.muted, marginBottom:16 }}>
-              They will no longer be able to log in. This cannot be undone.
+              {t("deleteUserWarning")}
             </div>
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={()=>deleteUser(delId)}
-                style={{...btnStyle(C.danger,"#fff"), flex:1}}>Delete</button>
+                style={{...btnStyle(C.danger,"#fff"), flex:1}}>{t("delete")}</button>
               <button onClick={()=>setDelId(null)}
-                style={{...ghostStyle(), flex:1}}>Cancel</button>
+                style={{...ghostStyle(), flex:1}}>{t("cancel")}</button>
             </div>
           </div>
         </div>

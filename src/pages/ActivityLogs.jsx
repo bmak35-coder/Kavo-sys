@@ -3,6 +3,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { ActivityLogService, LOG_CATEGORIES, LOG_ACTION } from "../db/services/activityLog.js";
 import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
 import { useTenant } from "../contexts/TenantProvider.jsx";
+import { useLang } from "../i18n/LanguageContext.jsx";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Activity Logs & Audit Trail  ·  v1.0
@@ -35,6 +36,7 @@ const ALL_ACTIONS = Object.entries(LOG_ACTION).map(([k,v]) => ({
 // ══════════════════════════════════════════════════════
 export default function ActivityLogs({ onBack }) {
   const { user } = useAuth();
+  const { t } = useLang();
 
   // Firebase integration
   const firebaseServices = useFirebaseServices();
@@ -123,7 +125,7 @@ export default function ActivityLogs({ onBack }) {
     a.href = URL.createObjectURL(blob);
     a.download = `KAVO_audit_logs_${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
-    showToast(`Exported ${visible.length} log entries`);
+    showToast(t("exportedLogsMsg").replace("{n}", visible.length));
   };
 
   // ── Clear all ─────────────────────────────────────
@@ -133,7 +135,7 @@ export default function ActivityLogs({ onBack }) {
     if (useFirebase) { await firebaseServices.auditLogs.clearAll(); } else { await ActivityLogService.clearAll(); }
     setLogs([]); setTotalCount(0); setUsers([]);
     setShowClear(false); setClearText(""); setClearing(false);
-    showToast("All logs cleared", "warn");
+    showToast(t("allLogsClearedMsg"), "warn");
   };
 
   const resetFilters = () => {
@@ -162,21 +164,21 @@ export default function ActivityLogs({ onBack }) {
 
       {/* ═══ HEADER ═══ */}
       <header style={{ background:C.surf, borderBottom:`2px solid ${C.acc}`, padding:"0 20px", height:56, display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
-        <button className="al-btn" onClick={onBack} style={Ghost(C.muted,true)}>← Back</button>
+        <button className="al-btn" onClick={onBack} style={Ghost(C.muted,true)}>{t("back")}</button>
         <div style={{ width:1, height:26, background:C.bdr }}/>
         <span style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:900, fontSize:18, color:C.acc, letterSpacing:"0.07em" }}>
           KAVO<span style={{color:C.text,opacity:0.3}}>-SYS</span>
         </span>
-        <span style={{ fontSize:10, fontWeight:800, color:C.muted, letterSpacing:"0.12em" }}>ACTIVITY LOGS</span>
+        <span style={{ fontSize:10, fontWeight:800, color:C.muted, letterSpacing:"0.12em" }}>{t("logsTitle")}</span>
         <div style={{ flex:1 }}/>
 
         <div style={{ display:"flex", gap:7, alignItems:"center" }}>
-          <span style={{ fontSize:11, color:C.muted }}>{visible.length.toLocaleString()} of {totalCount.toLocaleString()} entries</span>
+          <span style={{ fontSize:11, color:C.muted }}>{visible.length.toLocaleString()} / {totalCount.toLocaleString()}</span>
           {activeFilters > 0 && (
-            <button className="al-btn" onClick={resetFilters} style={{ ...Ghost(C.warn,true) }}>✕ {activeFilters} filter{activeFilters>1?"s":""}</button>
+            <button className="al-btn" onClick={resetFilters} style={{ ...Ghost(C.warn,true) }}>✕ {activeFilters}</button>
           )}
-          <button className="al-btn" onClick={exportCSV} disabled={!visible.length} style={{ ...Btn(C.success,"#000"), opacity:visible.length?1:0.4 }}>⬇ Export CSV</button>
-          <button className="al-btn" onClick={() => { setShowClear(true); setClearText(""); }} style={Btn(C.danger,"#fff")}>🗑 Clear Logs</button>
+          <button className="al-btn" onClick={exportCSV} disabled={!visible.length} style={{ ...Btn(C.success,"#000"), opacity:visible.length?1:0.4 }}>{t("exportCSVLogsBtn")}</button>
+          <button className="al-btn" onClick={() => { setShowClear(true); setClearText(""); }} style={Btn(C.danger,"#fff")}>{t("clearLogsBtn")}</button>
         </div>
 
         <div style={{ background:"#f0a50018", border:"1px solid #f0a50040", borderRadius:20, padding:"3px 12px", display:"flex", alignItems:"center", gap:6 }}>
@@ -193,7 +195,7 @@ export default function ActivityLogs({ onBack }) {
             <button className="al-cat al-btn"
               onClick={() => setFilterCat("all")}
               style={{ background:filterCat==="all"?C.acc+"22":"transparent", border:`1px solid ${filterCat==="all"?C.acc+"60":C.bdr}`, color:filterCat==="all"?C.acc:C.muted, borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:"inherit", transition:"all 0.14s" }}>
-              All · {logs.length.toLocaleString()}
+              {t("all")} · {logs.length.toLocaleString()}
             </button>
             {Object.entries(LOG_CATEGORIES).map(([k, cfg]) => {
               const count = catCounts[k] || 0;
@@ -219,7 +221,7 @@ export default function ActivityLogs({ onBack }) {
               {search && <button onClick={()=>setSearch("")} style={{ position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:15 }}>✕</button>}
             </div>
             <FSelect value={filterAction} onChange={setFilterAction}>
-              <option value="all">All Actions</option>
+              <option value="all">{t("allActionsFilter")}</option>
               {Object.entries(LOG_CATEGORIES).map(([k,cfg])=>(
                 <optgroup key={k} label={`${cfg.icon} ${cfg.label}`}>
                   {ALL_ACTIONS.filter(a=>a.category===k).map(a=><option key={a.key} value={a.key}>{a.label}</option>)}
@@ -227,35 +229,35 @@ export default function ActivityLogs({ onBack }) {
               ))}
             </FSelect>
             <FSelect value={filterUser} onChange={setFilterUser}>
-              <option value="all">All Users</option>
+              <option value="all">{t("allUsersFilter")}</option>
               {users.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}
             </FSelect>
             <input type="date" value={filterDate} onChange={e=>setFilterDate(e.target.value)}
               style={{ background:C.card, border:`1px solid ${filterDate?C.acc:C.bdr}`, borderRadius:8, padding:"8px 10px", color:C.text, fontSize:12, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}/>
-            <button className="al-btn" onClick={load} style={Ghost(C.muted,true)}>🔄 Refresh</button>
+            <button className="al-btn" onClick={load} style={Ghost(C.muted,true)}>{t("refresh")}</button>
           </div>
 
           {/* ── Log table ── */}
           {loading ? (
             <div style={{ display:"flex", justifyContent:"center", padding:60, flexDirection:"column", alignItems:"center", gap:12 }}>
               <div style={{ width:28, height:28, border:`2px solid ${C.bdr}`, borderTopColor:C.acc, borderRadius:"50%", animation:"spin 0.8s linear infinite" }}/>
-              <div style={{ fontSize:12, color:C.muted }}>Loading logs…</div>
+              <div style={{ fontSize:12, color:C.muted }}>{t("loadingLogs")}</div>
             </div>
           ) : visible.length === 0 ? (
             <div style={{ textAlign:"center", padding:"60px 20px", color:C.muted }}>
               <div style={{ fontSize:48, marginBottom:12, opacity:0.2 }}>📋</div>
               <div style={{ fontSize:14, fontWeight:700, color:"#3a4a60", marginBottom:6 }}>
-                {logs.length === 0 ? "No activity logged yet" : "No logs match this filter"}
+                {logs.length === 0 ? t("noActivityLogged") : t("noLogsMatchFilter")}
               </div>
               <div style={{ fontSize:12 }}>
-                {logs.length === 0 ? "Activity will appear here as users work in the POS." : "Try adjusting your search or filters."}
+                {logs.length === 0 ? t("activityWillAppear") : t("adjustSearchFilters")}
               </div>
             </div>
           ) : (
             <div style={{ background:C.card, border:`1px solid ${C.bdr}`, borderRadius:12, overflow:"hidden" }}>
               {/* Table header */}
               <div style={{ display:"grid", gridTemplateColumns:"50px 160px 120px 100px 160px 1fr 90px", padding:"8px 14px", background:"#0a1020", borderBottom:`1px solid ${C.bdr}` }}>
-                {["ID","Date & Time","User","Role","Action","Description","Order"].map(h=>(
+                {["ID", t("colDateTime"), t("colUser"), t("colRole"), t("colAction"), t("colDescription"), t("colOrder")].map(h=>(
                   <span key={h} style={{ fontSize:9, color:C.muted, fontWeight:700, letterSpacing:"0.08em" }}>{h}</span>
                 ))}
               </div>
@@ -286,7 +288,7 @@ export default function ActivityLogs({ onBack }) {
 
                       {/* User */}
                       <div style={{ fontSize:12, fontWeight:600, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                        {log.userName || "System"}
+                        {log.userName || t("systemUser")}
                       </div>
 
                       {/* Role */}
@@ -317,14 +319,14 @@ export default function ActivityLogs({ onBack }) {
                       <div style={{ padding:"10px 14px 14px", background:`${cat.color}06`, borderBottom:`1px solid ${C.bdr}` }}>
                         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                           {/* Full timestamp */}
-                          <Detail label="Timestamp" value={fmtDT(log.createdAt)}/>
-                          {log.orderId && <Detail label="Order ID" value={log.orderId} mono/>}
-                          {log.extra    && <Detail label="Extra"    value={formatJSON(log.extra)} mono/>}
+                          <Detail label={t("colTimestamp")} value={fmtDT(log.createdAt)}/>
+                          {log.orderId && <Detail label={t("colOrderId")} value={log.orderId} mono/>}
+                          {log.extra    && <Detail label={t("colExtra")} value={formatJSON(log.extra)} mono/>}
 
                           {/* Old value */}
                           {log.oldValue && (
                             <div>
-                              <div style={{ fontSize:9, color:C.danger, fontWeight:800, letterSpacing:"0.07em", marginBottom:4 }}>OLD VALUE</div>
+                              <div style={{ fontSize:9, color:C.danger, fontWeight:800, letterSpacing:"0.07em", marginBottom:4 }}>{t("colOldValue")}</div>
                               <pre style={{ background:C.bg, borderRadius:7, padding:"7px 10px", fontSize:10, color:"#f87171", fontFamily:"'JetBrains Mono',monospace", margin:0, whiteSpace:"pre-wrap", wordBreak:"break-all", border:`1px solid ${C.danger}20`, maxHeight:100, overflowY:"auto" }}>
                                 {formatJSON(log.oldValue)}
                               </pre>
@@ -334,7 +336,7 @@ export default function ActivityLogs({ onBack }) {
                           {/* New value */}
                           {log.newValue && (
                             <div>
-                              <div style={{ fontSize:9, color:C.success, fontWeight:800, letterSpacing:"0.07em", marginBottom:4 }}>NEW VALUE</div>
+                              <div style={{ fontSize:9, color:C.success, fontWeight:800, letterSpacing:"0.07em", marginBottom:4 }}>{t("colNewValue")}</div>
                               <pre style={{ background:C.bg, borderRadius:7, padding:"7px 10px", fontSize:10, color:"#86efac", fontFamily:"'JetBrains Mono',monospace", margin:0, whiteSpace:"pre-wrap", wordBreak:"break-all", border:`1px solid ${C.success}20`, maxHeight:100, overflowY:"auto" }}>
                                 {formatJSON(log.newValue)}
                               </pre>
@@ -356,13 +358,13 @@ export default function ActivityLogs({ onBack }) {
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.82)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9000, padding:16 }}>
           <div style={{ background:C.card2, border:`2px solid ${C.danger}40`, borderRadius:16, padding:"28px 24px", width:400, maxWidth:"96vw", boxShadow:"0 24px 64px rgba(0,0,0,0.7)" }}>
             <div style={{ fontSize:40, textAlign:"center", marginBottom:12 }}>🗑</div>
-            <div style={{ fontWeight:900, color:C.danger, fontSize:17, textAlign:"center", marginBottom:8 }}>Clear All Activity Logs?</div>
+            <div style={{ fontWeight:900, color:C.danger, fontSize:17, textAlign:"center", marginBottom:8 }}>{t("clearAllLogsTitle")}</div>
             <div style={{ fontSize:13, color:C.sub, textAlign:"center", lineHeight:1.7, marginBottom:18 }}>
-              This permanently deletes all <strong style={{color:C.text}}>{totalCount.toLocaleString()}</strong> log entries. This action cannot be undone.
+              {t("cannotUndo")} ({totalCount.toLocaleString()})
             </div>
             <div style={{ marginBottom:16 }}>
               <div style={{ fontSize:10, color:C.muted, fontWeight:700, letterSpacing:"0.07em", marginBottom:6 }}>
-                TYPE <span style={{color:C.danger,fontFamily:"monospace",letterSpacing:"0.15em"}}>CLEAR</span> TO CONFIRM
+                {t("typeClearConfirm")}
               </div>
               <input value={clearText} onChange={e=>setClearText(e.target.value.toUpperCase())}
                 placeholder="CLEAR"
@@ -371,9 +373,9 @@ export default function ActivityLogs({ onBack }) {
             <div style={{ display:"flex", gap:8 }}>
               <button className="al-btn" onClick={doClear} disabled={clearText!=="CLEAR"||clearing}
                 style={{ flex:2, ...Btn(clearText==="CLEAR"?C.danger:"#1a0a0a","#fff"), opacity:clearText!=="CLEAR"||clearing?0.5:1 }}>
-                {clearing ? "Clearing…" : `Clear ${totalCount.toLocaleString()} Logs`}
+                {clearing ? t("clearingLogs") : `${t("clearLogsBtn")} (${totalCount.toLocaleString()})`}
               </button>
-              <button className="al-btn" onClick={()=>setShowClear(false)} style={{...Ghost(),flex:1}}>Cancel</button>
+              <button className="al-btn" onClick={()=>setShowClear(false)} style={{...Ghost(),flex:1}}>{t("cancel")}</button>
             </div>
           </div>
         </div>

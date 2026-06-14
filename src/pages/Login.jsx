@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth, ROLE_META } from "../auth/AuthProvider";
+import { useLang } from "../i18n/LanguageContext.jsx";
 
 // ── Design tokens ─────────────────────────────────────
 const L = {
@@ -17,6 +18,7 @@ const L = {
 
 export default function Login() {
   const { login } = useAuth();
+  const { t } = useLang();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd,  setShowPwd]  = useState(false);
@@ -30,7 +32,7 @@ export default function Login() {
 
   const doLogin = async (u = username, p = password) => {
     if (!u.trim() || !p) {
-      setError("Please enter your username and password");
+      setError(t("enterUsernamePassword"));
       bump(); return;
     }
     setLoading(true); setError("");
@@ -89,7 +91,7 @@ export default function Login() {
             KAVO<span style={{ color: L.text, opacity: 0.35, fontWeight: 700 }}>-SYS</span>
           </div>
           <div style={{ fontSize: 12, color: L.sub, marginTop: 8, letterSpacing: "0.08em", fontWeight: 500 }}>
-            OFFLINE RESTAURANT POS SYSTEM
+            {t("offlinePOSSystem")}
           </div>
         </div>
 
@@ -103,13 +105,13 @@ export default function Login() {
           }}
         >
           <div style={{ fontWeight: 800, fontSize: 17, color: L.text, marginBottom: 22 }}>
-            Sign in to your account
+            {t("signInToAccount")}
           </div>
 
           {/* Username */}
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: L.sub, letterSpacing: "0.08em", marginBottom: 7 }}>
-              USERNAME
+              {t("username").toUpperCase()}
             </label>
             <input
               className="kv-input"
@@ -118,7 +120,7 @@ export default function Login() {
               onKeyDown={e => e.key === "Enter" && doLogin()}
               onFocus={() => setFocusU(true)}
               onBlur={() => setFocusU(false)}
-              placeholder="Enter your username"
+              placeholder={t("enterYourUsername")}
               autoComplete="username"
               spellCheck={false}
               style={{
@@ -135,7 +137,7 @@ export default function Login() {
           {/* Password */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: L.sub, letterSpacing: "0.08em", marginBottom: 7 }}>
-              PASSWORD
+              {t("password").toUpperCase()}
             </label>
             <div style={{ position: "relative" }}>
               <input
@@ -146,7 +148,7 @@ export default function Login() {
                 onKeyDown={e => e.key === "Enter" && doLogin()}
                 onFocus={() => setFocusP(true)}
                 onBlur={() => setFocusP(false)}
-                placeholder="Enter your password"
+                placeholder={t("enterYourPassword")}
                 autoComplete="current-password"
                 style={{
                   width: "100%", background: L.inner,
@@ -205,9 +207,9 @@ export default function Login() {
             {loading ? (
               <>
                 <span style={{ width: 16, height: 16, border: "2px solid #00000030", borderTopColor: "#000", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }}/>
-                Signing in...
+                {t("loggingIn")}
               </>
-            ) : "Sign In →"}
+            ) : t("signInBtn")}
           </button>
         </div>
 
@@ -216,17 +218,17 @@ export default function Login() {
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
             <div style={{ flex:1, height:1, background:L.bdr }}/>
             <span style={{ fontSize:10, color:L.muted, letterSpacing:"0.1em", fontWeight:700 }}>
-              STAFF ROLES
+              {t("staffRoles")}
             </span>
             <div style={{ flex:1, height:1, background:L.bdr }}/>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
             {[
-              { role:"owner",   access:"Full access to all modules" },
-              { role:"manager", access:"Reports, Inventory, Payroll, POS" },
-              { role:"cashier", access:"POS & orders only" },
-              { role:"kitchen", access:"Kitchen display only" },
-            ].map(({ role, access }) => {
+              { role:"owner",   accessKey:"roleOwnerAccess" },
+              { role:"manager", accessKey:"roleManagerAccess" },
+              { role:"cashier", accessKey:"roleCashierAccess" },
+              { role:"kitchen", accessKey:"roleKitchenAccess" },
+            ].map(({ role, accessKey }) => {
               const meta = m[role] || m.cashier;
               return (
                 <div key={role}
@@ -238,7 +240,7 @@ export default function Login() {
                     <div style={{ fontSize:10, fontWeight:800, color:meta.color }}>
                       {meta.label}
                     </div>
-                    <div style={{ fontSize:9, color:L.muted }}>{access}</div>
+                    <div style={{ fontSize:9, color:L.muted }}>{t(accessKey)}</div>
                   </div>
                 </div>
               );

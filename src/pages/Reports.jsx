@@ -431,10 +431,10 @@ export default function Reports({ onBack }) {
 
   // ─────────────────────────────────────────────────
   const TABS=[
-    {id:"dashboard",label:"📊 Dashboard"},
-    {id:"shift",    label:"🕐 Shift"},
-    {id:"history",  label:"📋 History"},
-    {id:"export",   label:"💾 Export"},
+    {id:"dashboard",label:`📊 ${t("totalSalesReport")}`},
+    {id:"shift",    label:`🕐 ${t("currentShift")}`},
+    {id:"history",  label:`📋 ${t("shiftHistory")}`},
+    {id:"export",   label:`💾 ${t("dateRangeExport")}`},
   ];
 
   return (
@@ -454,7 +454,7 @@ export default function Reports({ onBack }) {
 
       {/* ═══ HEADER ═══ */}
       <header style={{background:C.surf,borderBottom:`2px solid ${C.acc}`,padding:"0 16px",height:54,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <button className="rv-btn" onClick={onBack} style={{...ghost(),padding:"5px 12px",fontSize:12}}>← POS</button>
+        <button className="rv-btn" onClick={onBack} style={{...ghost(),padding:"5px 12px",fontSize:12}}>← {t("back")}</button>
         <div style={{width:1,height:24,background:C.bdr}}/>
         <span style={{fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:900,fontSize:17,color:C.acc,letterSpacing:"0.07em"}}>KAVO<span style={{color:C.text,opacity:0.35}}>-SYS</span></span>
         <span style={{fontSize:10,fontWeight:800,color:C.muted,letterSpacing:"0.1em"}}>REPORTS</span>
@@ -478,7 +478,7 @@ export default function Reports({ onBack }) {
         {/* Shift badge */}
         {currentShift && (
           <div style={{background:"#3fb95018",border:"1px solid #3fb95040",borderRadius:20,padding:"3px 12px",fontSize:11,fontWeight:700,color:"#3fb950"}}>
-            🟢 Shift Open · {currentShift.id}
+            🟢 {t("shiftOpenStatus")} · {currentShift.id}
           </div>
         )}
 
@@ -511,18 +511,18 @@ export default function Reports({ onBack }) {
                 <input type="date" value={customDate} onChange={e=>setCustomDate(e.target.value)}
                   style={{...inp,width:150,padding:"5px 10px",fontSize:12}}/>
               )}
-              <span style={{fontSize:11,color:C.muted,marginLeft:"auto"}}>{summary.count} paid orders</span>
+              <span style={{fontSize:11,color:C.muted,marginLeft:"auto"}}>{summary.count} {t("paidOrders")}</span>
             </div>
 
             {/* Metric cards */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10,marginBottom:16}}>
               {[
-                {label:"Total Revenue",    val:CUR(summary.total,sym),    col:C.acc,   icon:"💰"},
-                {label:t("orders"),           val:summary.count,              col:C.info,  icon:"📋"},
-                {label:t("avgOrderVal"), val:CUR(summary.avg,sym),       col:C.success,icon:"📈"},
-                {label:"Discounts Given",  val:CUR(summary.disc,sym),      col:C.warn,  icon:"🏷"},
-                {label:"Service Charges",  val:CUR(summary.svc,sym),       col:C.muted, icon:"🔧"},
-                {label:"VAT Collected",    val:CUR(summary.tax,sym),       col:"#a78bfa",icon:"🏛"},
+                {label:t("totalRevenue"),      val:CUR(summary.total,sym),    col:C.acc,   icon:"💰"},
+                {label:t("orders"),            val:summary.count,              col:C.info,  icon:"📋"},
+                {label:t("avgOrderVal"),       val:CUR(summary.avg,sym),       col:C.success,icon:"📈"},
+                {label:t("discountsGiven"),    val:CUR(summary.disc,sym),      col:C.warn,  icon:"🏷"},
+                {label:t("serviceChargesLabel"), val:CUR(summary.svc,sym),     col:C.muted, icon:"🔧"},
+                {label:t("vatCollected"),      val:CUR(summary.tax,sym),       col:"#a78bfa",icon:"🏛"},
               ].map(m=>(
                 <div key={m.label} style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:"14px 16px"}}>
                   <div style={{fontSize:18,marginBottom:6}}>{m.icon}</div>
@@ -535,12 +535,12 @@ export default function Reports({ onBack }) {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
               {/* Payment breakdown */}
               <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-                <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>💳 PAYMENT METHODS</div>
+                <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>💳 {t("paymentMethodsTitle").toUpperCase()}</div>
                 {[
-                  {label:"Cash",  val:summary.cashS,  col:"#3fb950",icon:"💵"},
-                  {label:"Card",  val:summary.cardS,  col:"#58a6ff",icon:"💳"},
-                  {label:"Whish", val:summary.whishS, col:"#a78bfa",icon:"📱"},
-                  {label:"Split", val:summary.splitS, col:"#fb923c",icon:"🔀"},
+                  {label:t("cash"),         val:summary.cashS,  col:"#3fb950",icon:"💵"},
+                  {label:t("card"),         val:summary.cardS,  col:"#58a6ff",icon:"💳"},
+                  {label:t("whishPayment"), val:summary.whishS, col:"#a78bfa",icon:"📱"},
+                  {label:"Split",           val:summary.splitS, col:"#fb923c",icon:"🔀"},
                 ].map(p=>(
                   <div key={p.label} style={{marginBottom:10}}>
                     <div style={{display:"flex",justifyContent:"space-between",marginBottom:4,fontSize:12}}>
@@ -550,23 +550,23 @@ export default function Reports({ onBack }) {
                     <div style={{height:5,background:C.bg,borderRadius:3,overflow:"hidden"}}>
                       <div style={{height:"100%",width:PCE(p.val,summary.total),background:p.col,borderRadius:3,transition:"width 0.4s ease"}}/>
                     </div>
-                    <div style={{fontSize:10,color:C.muted,marginTop:2}}>{PCE(p.val,summary.total)} of total</div>
+                    <div style={{fontSize:10,color:C.muted,marginTop:2}}>{PCE(p.val,summary.total)} {t("ofTotal")}</div>
                   </div>
                 ))}
               </div>
 
               {/* Top items */}
               <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-                <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>⭐ TOP ITEMS</div>
+                <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>⭐ {t("topItemsTitle").toUpperCase()}</div>
                 {summary.topItems.length===0
-                  ? <div style={{color:C.muted,fontSize:12,textAlign:"center",padding:20}}>No data</div>
+                  ? <div style={{color:C.muted,fontSize:12,textAlign:"center",padding:20}}>{t("noOrdersInPeriod")}</div>
                   : summary.topItems.slice(0,6).map((item,i)=>(
                     <div key={item.name} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                       <span style={{fontSize:10,color:C.muted,fontFamily:"monospace",minWidth:14}}>#{i+1}</span>
                       <span style={{fontSize:16}}>{item.em}</span>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:12,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
-                        <div style={{fontSize:10,color:C.muted}}>{item.qty} sold · {CUR(item.rev,sym)}</div>
+                        <div style={{fontSize:10,color:C.muted}}>{item.qty} {t("soldLabel")} · {CUR(item.rev,sym)}</div>
                       </div>
                     </div>
                   ))
@@ -576,15 +576,15 @@ export default function Reports({ onBack }) {
 
             {/* Hourly chart */}
             <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16,marginBottom:14}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:14,letterSpacing:"0.04em"}}>⏰ HOURLY SALES</div>
+              <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:14,letterSpacing:"0.04em"}}>⏰ {t("hourlySalesTitle").toUpperCase()}</div>
               <HourlyChart hourly={summary.hourly} sym={sym}/>
             </div>
 
             {/* Recent orders */}
             <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>🧾 RECENT TRANSACTIONS</div>
+              <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>🧾 {t("recentTransTitle").toUpperCase()}</div>
               {summary.orders.length===0
-                ? <div style={{color:C.muted,fontSize:12,textAlign:"center",padding:20}}>No orders in this period</div>
+                ? <div style={{color:C.muted,fontSize:12,textAlign:"center",padding:20}}>{t("noOrdersInPeriod")}</div>
                 : summary.orders.slice().reverse().slice(0,15).map(o=>(
                   <div key={o.orderNo} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.bdr}`}}>
                     <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:700,color:C.acc,fontSize:12,minWidth:70}}>{o.orderNo}</span>
@@ -611,21 +611,21 @@ export default function Reports({ onBack }) {
                   <div>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
                       <div style={{width:8,height:8,borderRadius:"50%",background:"#3fb950"}}/>
-                      <span style={{fontWeight:800,fontSize:15,color:C.text}}>Shift Active</span>
+                      <span style={{fontWeight:800,fontSize:15,color:C.text}}>{t("shiftActiveLabel")}</span>
                     </div>
                     <div style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:700,color:C.acc,fontSize:14}}>{currentShift.id}</div>
                   </div>
                   <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:12,color:C.muted}}>Duration</div>
+                    <div style={{fontSize:12,color:C.muted}}>{t("duration")}</div>
                     <div style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:700,color:C.text,fontSize:16}}>{fmtDur(currentShift.openedAt)}</div>
                   </div>
                 </div>
 
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
                   {[
-                    {label:t("cashierLabel"),  val:currentShift.cashier,             mono:false},
-                    {label:"Opened",   val:`${fmtDate(currentShift.openedAt)} ${fmtTime(currentShift.openedAt)}`, mono:false},
-                    {label:"Opening Cash", val:CUR(currentShift.openingCash,sym), mono:true},
+                    {label:t("cashierLabel"),   val:currentShift.cashier,             mono:false},
+                    {label:t("shiftOpened"),    val:`${fmtDate(currentShift.openedAt)} ${fmtTime(currentShift.openedAt)}`, mono:false},
+                    {label:t("openingCash"),    val:CUR(currentShift.openingCash,sym), mono:true},
                   ].map(r=>(
                     <div key={r.label} style={{background:C.bg,borderRadius:8,padding:"10px 12px"}}>
                       <div style={{fontSize:10,color:C.muted,marginBottom:3}}>{r.label}</div>
@@ -636,13 +636,13 @@ export default function Reports({ onBack }) {
 
                 {/* Live shift metrics */}
                 <div style={{background:C.bg,borderRadius:10,padding:12,marginBottom:12}}>
-                  <div style={{fontSize:11,color:C.muted,marginBottom:8,fontWeight:700,letterSpacing:"0.05em"}}>CURRENT SHIFT METRICS</div>
+                  <div style={{fontSize:11,color:C.muted,marginBottom:8,fontWeight:700,letterSpacing:"0.05em"}}>{t("currentShiftMetrics").toUpperCase()}</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:10}}>
                     {[
-                      {label:t("orders"),     val:shiftSummary.count,         col:C.info},
-                      {label:"Total Sales",   val:CUR(shiftSummary.total,sym), col:C.acc},
-                      {label:"Avg Order",     val:CUR(shiftSummary.avg,sym),   col:C.warn},
-                      {label:"Discounts",     val:"-"+CUR(shiftSummary.disc,sym), col:"#d29922"},
+                      {label:t("orders"),        val:shiftSummary.count,            col:C.info},
+                      {label:t("totalSales"),    val:CUR(shiftSummary.total,sym),    col:C.acc},
+                      {label:t("avgOrderLabel"), val:CUR(shiftSummary.avg,sym),      col:C.warn},
+                      {label:t("discountsLabel"),val:"-"+CUR(shiftSummary.disc,sym), col:"#d29922"},
                     ].map(m=>(
                       <div key={m.label} style={{textAlign:"center"}}>
                         <div style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:800,fontSize:15,color:m.col}}>{m.val}</div>
@@ -652,12 +652,12 @@ export default function Reports({ onBack }) {
                   </div>
                   {/* Payment breakdown */}
                   <div style={{borderTop:"1px solid #1e2d4a",paddingTop:10}}>
-                    <div style={{fontSize:10,color:C.muted,marginBottom:7,fontWeight:700,letterSpacing:"0.05em"}}>PAYMENT BREAKDOWN</div>
+                    <div style={{fontSize:10,color:C.muted,marginBottom:7,fontWeight:700,letterSpacing:"0.05em"}}>{t("paymentMethodsTitle").toUpperCase()}</div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                       {[
-                        {label:"💵 Cash",  val:shiftSummary.cashS,  col:"#3fb950"},
-                        {label:"💳 Card",  val:shiftSummary.cardS,  col:"#58a6ff"},
-                        {label:"📱 Whish", val:shiftSummary.whishS, col:"#a78bfa"},
+                        {label:`💵 ${t("cash")}`,  val:shiftSummary.cashS,  col:"#3fb950"},
+                        {label:`💳 ${t("card")}`,  val:shiftSummary.cardS,  col:"#58a6ff"},
+                        {label:`📱 ${t("whishPayment")}`, val:shiftSummary.whishS, col:"#a78bfa"},
                       ].map(m=>(
                         <div key={m.label} style={{background:C.surf,borderRadius:8,padding:"9px 10px",border:"1px solid "+m.col+"30"}}>
                           <div style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:800,fontSize:14,color:m.col}}>{CUR(m.val,sym)}</div>
@@ -668,15 +668,15 @@ export default function Reports({ onBack }) {
                     {/* Expected drawer */}
                     <div style={{marginTop:10,background:"#0b1820",borderRadius:8,padding:"9px 12px",border:"1px solid #1e3a20"}}>
                       <div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
-                        <span style={{color:C.muted}}>Opening Cash</span>
+                        <span style={{color:C.muted}}>{t("openingCash")}</span>
                         <span style={{fontFamily:"'JetBrains Mono',monospace",color:C.text}}>{CUR(currentShift.openingCash,sym)}</span>
                       </div>
                       <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginTop:4}}>
-                        <span style={{color:C.muted}}>+ Cash Sales</span>
+                        <span style={{color:C.muted}}>+ {t("cash")} {t("totalSales")}</span>
                         <span style={{fontFamily:"'JetBrains Mono',monospace",color:"#3fb950"}}>+{CUR(shiftSummary.cashS,sym)}</span>
                       </div>
                       <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginTop:6,paddingTop:6,borderTop:"1px solid #1e3a20"}}>
-                        <span style={{color:"#3fb950",fontWeight:700}}>Expected in Drawer</span>
+                        <span style={{color:"#3fb950",fontWeight:700}}>{t("drawerLabel")}</span>
                         <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:900,color:"#3fb950"}}>{CUR(safeNum(currentShift.openingCash)+shiftSummary.cashS,sym)}</span>
                       </div>
                     </div>
@@ -685,19 +685,19 @@ export default function Reports({ onBack }) {
 
                 <div style={{display:"flex",gap:10}}>
                   <button className="rv-btn" onClick={()=>setShowCloseModal(true)}
-                    style={{...btn(C.acc),flex:1}}>🔒 Close Shift</button>
+                    style={{...btn(C.acc),flex:1}}>🔒 {t("closeShiftBtn")}</button>
                   <button className="rv-btn" onClick={()=>printShiftReport(currentShift)}
-                    style={{...btn(C.surf,"#fff"),border:`1px solid ${C.bdr}`}}>🖨 Print</button>
+                    style={{...btn(C.surf,"#fff"),border:`1px solid ${C.bdr}`}}>🖨 {t("print")}</button>
                 </div>
               </div>
             ) : (
               <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:14,padding:24,marginBottom:16,textAlign:"center"}}>
                 <div style={{fontSize:40,marginBottom:10}}>⏱</div>
-                <div style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:6}}>No shift is currently open</div>
-                <div style={{fontSize:12,color:C.muted,marginBottom:20}}>Open a shift to start tracking sales and cash</div>
+                <div style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:6}}>{t("noShiftOpen")}</div>
+                <div style={{fontSize:12,color:C.muted,marginBottom:20}}>{t("openShiftToTrack")}</div>
                 <button className="rv-btn" onClick={()=>{setCashierName(user?.name||"");setShowOpenModal(true);}}
                   style={{...btn(C.success,"#000"),padding:"10px 28px"}}>
-                  🟢 Open New Shift
+                  🟢 {t("openNewShiftBtn")}
                 </button>
               </div>
             )}
@@ -705,7 +705,7 @@ export default function Reports({ onBack }) {
             {/* Quick stats for last closed shift */}
             {shifts.filter(s=>isAdmin||s.cashierId===user?.id).slice(0,1).map(s=>(
               <div key={s.id} style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-                <div style={{fontSize:11,color:C.muted,fontWeight:700,letterSpacing:"0.06em",marginBottom:10}}>LAST CLOSED SHIFT</div>
+                <div style={{fontSize:11,color:C.muted,fontWeight:700,letterSpacing:"0.06em",marginBottom:10}}>{t("lastClosedShift").toUpperCase()}</div>
                 <ShiftRow s={s} sym={sym} onView={()=>{setSelectedShift(s);setTab("history");}} isAdmin={isAdmin} onDelete={()=>setShowDelConfirm(s.id)} onPrint={()=>printShiftReport(s)} onReopen={isAdmin?()=>reopenShift(s):null}/>
               </div>
             ))}
@@ -721,14 +721,14 @@ export default function Reports({ onBack }) {
                 style={{...inp,flex:1,maxWidth:400}}/>
               <span style={{fontSize:11,color:C.muted}}>{visibleShifts.length} shift{visibleShifts.length!==1?"s":""}</span>
               {isAdmin && shifts.length>0 && (
-                <button className="rv-btn" onClick={exportShiftsCSV} style={ghost(C.info)}>📥 Export CSV</button>
+                <button className="rv-btn" onClick={exportShiftsCSV} style={ghost(C.info)}>📥 {t("exportShiftHistCSV")}</button>
               )}
             </div>
 
             {visibleShifts.length===0
               ? <div style={{textAlign:"center",padding:60,color:C.muted}}>
                   <div style={{fontSize:40,marginBottom:10}}>📋</div>
-                  <div style={{fontSize:14}}>No shift history found</div>
+                  <div style={{fontSize:14}}>{t("noShiftHistory")}</div>
                 </div>
               : (
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -753,9 +753,9 @@ export default function Reports({ onBack }) {
           <div className="rv-in" style={{maxWidth:580,margin:"0 auto"}}>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               {[
-                {icon:"🖨",title:"Print Current Shift Report",desc:"Thermal receipt-style shift summary for current or last shift",action:()=>printShiftReport(currentShift||shifts[0]),disabled:!currentShift&&shifts.length===0,col:C.acc},
-                {icon:"📥",title:"Export Orders to CSV",desc:`Export ${filteredOrders.length} orders from selected date range`,action:exportOrdersCSV,disabled:filteredOrders.length===0,col:C.info},
-                {icon:"📋",title:"Export Shift History to CSV",desc:`Export ${shifts.length} closed shifts to spreadsheet`,action:exportShiftsCSV,disabled:shifts.length===0,col:C.success},
+                {icon:"🖨",title:t("printShiftReport"),desc:"Thermal receipt-style shift summary for current or last shift",action:()=>printShiftReport(currentShift||shifts[0]),disabled:!currentShift&&shifts.length===0,col:C.acc},
+                {icon:"📥",title:t("exportOrdersCSVBtn"),desc:`Export ${filteredOrders.length} ${t("orders")}`,action:exportOrdersCSV,disabled:filteredOrders.length===0,col:C.info},
+                {icon:"📋",title:t("exportShiftHistCSV"),desc:`Export ${shifts.length} ${t("shiftHistory")}`,action:exportShiftsCSV,disabled:shifts.length===0,col:C.success},
               ].map(e=>(
                 <div key={e.title} style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:20,display:"flex",alignItems:"center",gap:16,opacity:e.disabled?0.4:1}}>
                   <div style={{fontSize:32,flexShrink:0}}>{e.icon}</div>
@@ -765,13 +765,13 @@ export default function Reports({ onBack }) {
                   </div>
                   <button className="rv-btn" onClick={e.action} disabled={e.disabled}
                     style={{...btn(e.col),flexShrink:0,opacity:e.disabled?0.4:1}}>
-                    Go →
+                    {t("goBtn")}
                   </button>
                 </div>
               ))}
 
               <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16,marginTop:4}}>
-                <div style={{fontSize:11,color:C.muted,fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>DATE RANGE FOR EXPORT</div>
+                <div style={{fontSize:11,color:C.muted,fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>{t("dateRangeExport").toUpperCase()}</div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   {DATE_FILTERS_SHORT.map(([v,l])=>(
                     <button key={v} className="rv-btn" onClick={()=>setDateRange(v)}
@@ -792,37 +792,37 @@ export default function Reports({ onBack }) {
 
       {/* ══ OPEN SHIFT MODAL ══ */}
       {showOpenModal && (
-        <Modal title="🟢 Open New Shift" onClose={()=>setShowOpenModal(false)}>
+        <Modal title={`🟢 ${t("openShift")}`} onClose={()=>setShowOpenModal(false)}>
           <div style={{marginBottom:14}}>
-            <label style={{fontSize:11,color:C.muted,fontWeight:700,letterSpacing:"0.06em",display:"block",marginBottom:6}}>CASHIER NAME</label>
-            <input value={cashierName} onChange={e=>setCashierName(e.target.value)} placeholder="Your name" style={inp}/>
+            <label style={{fontSize:11,color:C.muted,fontWeight:700,letterSpacing:"0.06em",display:"block",marginBottom:6}}>{t("cashierNameField").toUpperCase()}</label>
+            <input value={cashierName} onChange={e=>setCashierName(e.target.value)} placeholder={t("enterCashierName")} style={inp}/>
           </div>
           <div style={{marginBottom:20}}>
-            <label style={{fontSize:11,color:C.muted,fontWeight:700,letterSpacing:"0.06em",display:"block",marginBottom:6}}>OPENING CASH IN DRAWER ({sym})</label>
+            <label style={{fontSize:11,color:C.muted,fontWeight:700,letterSpacing:"0.06em",display:"block",marginBottom:6}}>{t("openingCashField").toUpperCase()} ({sym})</label>
             <input type="number" min="0" step="0.01" value={openCash} onChange={e=>setOpenCash(e.target.value)} placeholder="0.00" style={{...inp,fontFamily:"'JetBrains Mono',monospace"}}/>
           </div>
           <div style={{background:C.bg,borderRadius:8,padding:"10px 12px",marginBottom:16,fontSize:12,color:C.info}}>
-            📌 Shift ID will be: <strong style={{fontFamily:"monospace"}}>{genShiftId()}</strong>
+            📌 {t("shiftIdWillBe")}: <strong style={{fontFamily:"monospace"}}>{genShiftId()}</strong>
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button className="rv-btn" onClick={openShift} style={{...btn(C.success,"#000"),flex:1}}>Open Shift</button>
-            <button className="rv-btn" onClick={()=>setShowOpenModal(false)} style={{...ghost(),flex:1}}>Cancel</button>
+            <button className="rv-btn" onClick={openShift} style={{...btn(C.success,"#000"),flex:1}}>{t("openShiftBtn")}</button>
+            <button className="rv-btn" onClick={()=>setShowOpenModal(false)} style={{...ghost(),flex:1}}>{t("cancel")}</button>
           </div>
         </Modal>
       )}
 
       {/* ══ CLOSE SHIFT MODAL ══ */}
       {showCloseModal && currentShift && (
-        <Modal title="🔒 Close Shift" onClose={()=>setShowCloseModal(false)} wide>
+        <Modal title={`🔒 ${t("closeShift")}`} onClose={()=>setShowCloseModal(false)} wide>
           {/* Summary */}
           <div style={{background:C.bg,borderRadius:10,padding:14,marginBottom:14}}>
-            <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:10,letterSpacing:"0.05em"}}>SHIFT SUMMARY</div>
+            <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:10,letterSpacing:"0.05em"}}>{t("shiftSummaryLabel").toUpperCase()}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
               {[
-                ["Total Orders",    shiftSummary.count],
-                ["Total Sales",     CUR(shiftSummary.total,sym)],
-                ["Opening Cash",    CUR(currentShift.openingCash,sym)],
-                ["Avg Order",       CUR(shiftSummary.avg,sym)],
+                [t("totalOrdersLabel"), shiftSummary.count],
+                [t("totalSales"),       CUR(shiftSummary.total,sym)],
+                [t("openingCash"),      CUR(currentShift.openingCash,sym)],
+                [t("avgOrderLabel"),    CUR(shiftSummary.avg,sym)],
               ].map(([l,v])=>(
                 <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0",borderBottom:`1px solid ${C.bdr}`}}>
                   <span style={{color:C.muted}}>{l}</span>
@@ -832,12 +832,12 @@ export default function Reports({ onBack }) {
             </div>
             {/* Payment breakdown inside close modal */}
             <div style={{marginTop:10,borderTop:`1px solid ${C.bdr}`,paddingTop:10}}>
-              <div style={{fontSize:10,color:C.muted,fontWeight:700,marginBottom:7,letterSpacing:"0.06em"}}>PAYMENT BREAKDOWN</div>
+              <div style={{fontSize:10,color:C.muted,fontWeight:700,marginBottom:7,letterSpacing:"0.06em"}}>{t("paymentMethodsTitle").toUpperCase()}</div>
               {[
-                ["💵 Cash Sales",  CUR(shiftSummary.cashS,sym),  "#3fb950"],
-                ["💳 Card Sales",  CUR(shiftSummary.cardS,sym),  "#58a6ff"],
-                ["📱 Whish Sales", CUR(shiftSummary.whishS,sym), "#a78bfa"],
-                ["🏷 Discounts",   "-"+CUR(shiftSummary.disc,sym), "#d29922"],
+                [`💵 ${t("cash")} ${t("totalSales")}`,  CUR(shiftSummary.cashS,sym),  "#3fb950"],
+                [`💳 ${t("card")} ${t("totalSales")}`,  CUR(shiftSummary.cardS,sym),  "#58a6ff"],
+                [`📱 ${t("whishPayment")} ${t("totalSales")}`, CUR(shiftSummary.whishS,sym), "#a78bfa"],
+                [`🏷 ${t("discountsLabel")}`,   "-"+CUR(shiftSummary.disc,sym), "#d29922"],
               ].map(([l,v,col])=>(
                 <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}>
                   <span style={{color:C.muted}}>{l}</span>
@@ -849,17 +849,17 @@ export default function Reports({ onBack }) {
 
           {/* Cash reconciliation */}
           <div style={{background:C.bg,borderRadius:10,padding:14,marginBottom:14}}>
-            <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:10,letterSpacing:"0.05em"}}>CASH RECONCILIATION</div>
+            <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:10,letterSpacing:"0.05em"}}>{t("drawerLabel").toUpperCase()}</div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
-              <span style={{color:C.muted}}>Opening cash</span>
+              <span style={{color:C.muted}}>{t("openingCash")}</span>
               <span style={{fontFamily:"'JetBrains Mono',monospace",color:C.text}}>{CUR(currentShift.openingCash,sym)}</span>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:8,paddingBottom:8,borderBottom:`1px solid ${C.bdr}`}}>
-              <span style={{color:C.muted}}>+ Cash sales</span>
+              <span style={{color:C.muted}}>+ {t("cash")} {t("totalSales")}</span>
               <span style={{fontFamily:"'JetBrains Mono',monospace",color:C.success}}>+{CUR(shiftSummary.cashS,sym)}</span>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:14}}>
-              <span style={{color:C.text,fontWeight:700}}>Expected in drawer</span>
+              <span style={{color:C.text,fontWeight:700}}>{t("drawerLabel")}</span>
               <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:800,color:C.acc,fontSize:15}}>{CUR(safeNum(currentShift.openingCash)+shiftSummary.cashS,sym)}</span>
             </div>
             <label style={{fontSize:11,color:C.muted,fontWeight:700,letterSpacing:"0.06em",display:"block",marginBottom:6}}>
@@ -882,12 +882,12 @@ export default function Reports({ onBack }) {
                   display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
                     <div style={{fontSize:12,fontWeight:800,color:(isBal||isOver)?C.success:C.danger}}>
-                      {isBal?"✓ BALANCED":isOver?"📈 OVERAGE":"📉 SHORTAGE"}
+                      {isBal?`✓ ${t("balancedLabel")}`:isOver?`📈 ${t("overageLabel")}`:`📉 ${t("shortageLabel")}`}
                     </div>
                     <div style={{fontSize:10,color:"#4a6080",marginTop:2}}>
-                      {isBal?"Drawer matches expected amount"
-                        :isOver?"Drawer has more cash than expected"
-                        :"Drawer has less cash than expected"}
+                      {isBal?t("balancedLabel")
+                        :isOver?t("overageLabel")
+                        :t("shortageLabel")}
                     </div>
                   </div>
                   {!isBal&&<span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:14,fontWeight:900,color:isOver?C.success:C.danger}}>{isOver?"+":""}{CUR(diff,sym)}</span>}
@@ -897,8 +897,8 @@ export default function Reports({ onBack }) {
           </div>
 
           <div style={{display:"flex",gap:8}}>
-            <button className="rv-btn" onClick={closeShift} style={{...btn(C.danger,"#fff"),flex:1}}>Close Shift & Save</button>
-            <button className="rv-btn" onClick={()=>setShowCloseModal(false)} style={{...ghost(),flex:1}}>Cancel</button>
+            <button className="rv-btn" onClick={closeShift} style={{...btn(C.danger,"#fff"),flex:1}}>{t("closeShiftSaveBtn")}</button>
+            <button className="rv-btn" onClick={()=>setShowCloseModal(false)} style={{...ghost(),flex:1}}>{t("cancel")}</button>
           </div>
         </Modal>
       )}
@@ -910,8 +910,8 @@ export default function Reports({ onBack }) {
             This will permanently remove shift <strong style={{color:C.text,fontFamily:"monospace"}}>{showDelConfirm}</strong> from local history. This cannot be undone.
           </p>
           <div style={{display:"flex",gap:8}}>
-            <button className="rv-btn" onClick={()=>deleteShift(showDelConfirm)} style={{...btn(C.danger,"#fff"),flex:1}}>Delete</button>
-            <button className="rv-btn" onClick={()=>setShowDelConfirm(null)} style={{...ghost(),flex:1}}>Cancel</button>
+            <button className="rv-btn" onClick={()=>deleteShift(showDelConfirm)} style={{...btn(C.danger,"#fff"),flex:1}}>{t("delete")}</button>
+            <button className="rv-btn" onClick={()=>setShowDelConfirm(null)} style={{...ghost(),flex:1}}>{t("cancel")}</button>
           </div>
         </Modal>
       )}
@@ -923,40 +923,41 @@ export default function Reports({ onBack }) {
    SUB-COMPONENTS
 ══════════════════════════════════════════════════════ */
 function ShiftRow({ s, sym, isAdmin, onDelete, onPrint, onReopen }) {
+  const { t } = useLang();
   const sm = s.summary||{};
   const diff = safeNum(sm.cashDiff);
   const hasDiff = sm.cashDiff !== null && sm.cashDiff !== undefined;
   const isBalanced = hasDiff && Math.abs(diff) < 0.005;
   const isOver     = hasDiff && !isBalanced && diff > 0;
-  const diffLabel  = isBalanced ? "✓ Balanced" : isOver ? "📈 Overage" : "📉 Shortage";
+  const diffLabel  = isBalanced ? `✓ ${t("balancedLabel")}` : isOver ? `📈 ${t("overageLabel")}` : `📉 ${t("shortageLabel")}`;
   const diffCol    = isBalanced ? "#3fb950"    : isOver ? "#3fb950"    : "#f85149";
   const diffBg     = isBalanced ? "#0d2010"    : isOver ? "#0d2010"    : "#200a0a";
   return (
     <div>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
         <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:700,fontSize:13,color:"#f0a500"}}>{s.shiftId||s.id}</span>
-        <span style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:s.status==="open"?"#3fb95020":"#6b728020",border:`1px solid ${s.status==="open"?"#3fb95060":"#6b728040"}`,color:s.status==="open"?"#3fb950":"#94a3b8",fontWeight:700}}>{s.status==="open"?"🟢 Open":"✓ Closed"}</span>
+        <span style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:s.status==="open"?"#3fb95020":"#6b728020",border:`1px solid ${s.status==="open"?"#3fb95060":"#6b728040"}`,color:s.status==="open"?"#3fb950":"#94a3b8",fontWeight:700}}>{s.status==="open"?`🟢 ${t("shiftOpenStatus")}`:`✓ ${t("shiftClosedStatus")}`}</span>
         <span style={{fontSize:11,color:"#7d8fa0"}}>{s.cashier}</span>
         <span style={{fontSize:11,color:"#4a6080"}}>{fmtDate(s.openedAt)}</span>
         <span style={{fontSize:11,color:"#4a6080"}}>{fmtDur(s.openedAt,s.closedAt)}</span>
         {/* Total sales — always labeled */}
         <span style={{marginLeft:"auto",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}>
-          <span style={{fontSize:9,color:"#4a6080",letterSpacing:"0.06em"}}>TOTAL SALES</span>
+          <span style={{fontSize:9,color:"#4a6080",letterSpacing:"0.06em"}}>{t("totalSales").toUpperCase()}</span>
           <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:700,color:"#3fb950"}}>{CUR(sm.total||0,sym)}</span>
         </span>
         {/* Cash variance — labeled with context; null = not reconciled */}
         {sm.reconciled === false || sm.closingCash == null ? (
           s.status === "closed" && (
             <span style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}>
-              <span style={{fontSize:9,color:"#4a6080",letterSpacing:"0.06em"}}>DRAWER</span>
+              <span style={{fontSize:9,color:"#4a6080",letterSpacing:"0.06em"}}>{t("drawerLabel").toUpperCase()}</span>
               <span style={{fontSize:10,fontWeight:700,color:"#4a6080",background:"#1a2438",border:"1px solid #2a3a50",borderRadius:6,padding:"2px 7px"}}>
-                ○ Not Reconciled
+                ○ {t("notReconciled")}
               </span>
             </span>
           )
         ) : hasDiff && (
           <span style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}>
-            <span style={{fontSize:9,color:"#4a6080",letterSpacing:"0.06em"}}>DRAWER VARIANCE</span>
+            <span style={{fontSize:9,color:"#4a6080",letterSpacing:"0.06em"}}>{t("drawerVariance").toUpperCase()}</span>
             <span style={{
               fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:800,
               color:diffCol,
@@ -968,7 +969,7 @@ function ShiftRow({ s, sym, isAdmin, onDelete, onPrint, onReopen }) {
           </span>
         )}
         <button className="rv-btn" onClick={e=>{e.stopPropagation();onPrint&&onPrint();}} style={{background:"transparent",border:"1px solid #1a2438",borderRadius:6,padding:"3px 8px",color:"#4a6080",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>🖨</button>
-        {isAdmin&&onReopen&&s.status==="closed"&&<button className="rv-btn" onClick={e=>{e.stopPropagation();onReopen();}} style={{background:"transparent",border:"1px solid #58a6ff30",borderRadius:6,padding:"3px 8px",color:"#58a6ff",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>↩ Reopen</button>}
+        {isAdmin&&onReopen&&s.status==="closed"&&<button className="rv-btn" onClick={e=>{e.stopPropagation();onReopen();}} style={{background:"transparent",border:"1px solid #58a6ff30",borderRadius:6,padding:"3px 8px",color:"#58a6ff",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>↩ {t("reopenShiftBtn")}</button>}
         {isAdmin&&onDelete&&<button className="rv-btn" onClick={e=>{e.stopPropagation();onDelete();}} style={{background:"transparent",border:"1px solid #f8514930",borderRadius:6,padding:"3px 8px",color:"#f85149",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>}
       </div>
     </div>
@@ -976,6 +977,7 @@ function ShiftRow({ s, sym, isAdmin, onDelete, onPrint, onReopen }) {
 }
 
 function ShiftDetail({ s, sym }) {
+  const { t } = useLang();
   const sm = s.summary||{};
   const safeNum=(v)=>{const n=+v;return isFinite(n)?n:0;};
   const CUR=(n,s="$")=>`${s}${safeNum(n).toFixed(2)}`;
@@ -988,13 +990,13 @@ function ShiftDetail({ s, sym }) {
     <div style={{marginTop:14,paddingTop:14,borderTop:"1px solid #1a2438"}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:8,marginBottom:12}}>
         {[
-          {label:"Total Orders",  val:sm.count||0,           col:"#58a6ff"},
-          {label:"Total Sales",   val:CUR(sm.total,sym),     col:"#f0a500"},
-          {label:"Avg Order",     val:CUR(sm.avg,sym),       col:"#3fb950"},
-          {label:"💵 Cash Sales",  val:CUR(sm.cashS,sym),     col:"#3fb950"},
-          {label:"💳 Card Sales",  val:CUR(sm.cardS,sym),     col:"#58a6ff"},
-          {label:"📱 Whish Sales", val:CUR(sm.whishS||0,sym), col:"#a78bfa"},
-          {label:"🏷 Discounts",   val:"-"+CUR(sm.disc,sym),  col:"#d29922"},
+          {label:t("totalOrdersLabel"),             val:sm.count||0,           col:"#58a6ff"},
+          {label:t("totalSales"),                   val:CUR(sm.total,sym),     col:"#f0a500"},
+          {label:t("avgOrderLabel"),                val:CUR(sm.avg,sym),       col:"#3fb950"},
+          {label:`💵 ${t("cash")} ${t("totalSales")}`,  val:CUR(sm.cashS,sym),     col:"#3fb950"},
+          {label:`💳 ${t("card")} ${t("totalSales")}`,  val:CUR(sm.cardS,sym),     col:"#58a6ff"},
+          {label:`📱 ${t("whishPayment")} ${t("totalSales")}`, val:CUR(sm.whishS||0,sym), col:"#a78bfa"},
+          {label:`🏷 ${t("discountsLabel")}`,       val:"-"+CUR(sm.disc,sym),  col:"#d29922"},
         ].map(m=>(
           <div key={m.label} style={{background:"#0d1525",borderRadius:8,padding:"10px 12px"}}>
             <div style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:800,fontSize:14,color:m.col,marginBottom:3}}>{m.val}</div>
@@ -1005,12 +1007,12 @@ function ShiftDetail({ s, sym }) {
 
       {hasDiff && (
         <div style={{background:"#0d1525",borderRadius:10,padding:"12px 14px",marginBottom:12}}>
-          <div style={{fontSize:10,color:"#4a6080",fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>💰 CASH DRAWER RECONCILIATION</div>
+          <div style={{fontSize:10,color:"#4a6080",fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>💰 {t("drawerLabel").toUpperCase()}</div>
           {[
-            ["Opening Cash (start of shift)",             CUR(sm.openingCash||s.openingCash||0,sym), "#7d8fa0"],
-            ["+ Cash Sales (collected during shift)",    "+"+CUR(sm.cashS||0,sym),                  "#3fb950"],
-            ["= Expected Drawer Total",                   CUR(safeNum(sm.openingCash||s.openingCash)+safeNum(sm.cashS),sym), "#f0a500"],
-            ["Actual Closing Count (entered by cashier)", CUR(sm.closingCash,sym),                   "#7d8fa0"],
+            [t("openingCash"),      CUR(sm.openingCash||s.openingCash||0,sym), "#7d8fa0"],
+            [`+ ${t("cash")} ${t("totalSales")}`,"+"+CUR(sm.cashS||0,sym),   "#3fb950"],
+            [t("drawerLabel"),      CUR(safeNum(sm.openingCash||s.openingCash)+safeNum(sm.cashS),sym), "#f0a500"],
+            [t("closingCash")||"Actual Closing", CUR(sm.closingCash,sym),     "#7d8fa0"],
           ].map(([l,v,col])=>(
             <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",fontSize:11,padding:"4px 0",borderBottom:"1px solid #1a2438"}}>
               <span style={{color:"#6b7fa0",flex:1,paddingRight:8}}>{l}</span>
@@ -1023,10 +1025,10 @@ function ShiftDetail({ s, sym }) {
             display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
               <div style={{fontSize:12,fontWeight:800,color:isBalanced?"#3fb950":(isOver?"#3fb950":"#f85149")}}>
-                {isBalanced?"✓ BALANCED":isOver?"📈 OVERAGE":"📉 SHORTAGE"}
+                {isBalanced?`✓ ${t("balancedLabel")}`:isOver?`📈 ${t("overageLabel")}`:`📉 ${t("shortageLabel")}`}
               </div>
               <div style={{fontSize:10,color:"#4a6080",marginTop:2}}>
-                {isBalanced?"Actual drawer matches expected amount":isOver?"Drawer has more cash than expected":"Drawer has less cash than expected"}
+                {isBalanced?t("balancedLabel"):isOver?t("overageLabel"):t("shortageLabel")}
               </div>
             </div>
             {!isBalanced&&<span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:15,fontWeight:900,color:isOver?"#3fb950":"#f85149"}}>{isOver?"+":"-"}{CUR(Math.abs(diff),sym)}</span>}
@@ -1036,7 +1038,7 @@ function ShiftDetail({ s, sym }) {
 
       {sm.topItems&&sm.topItems.length>0&&(
         <div style={{background:"#0d1525",borderRadius:8,padding:12}}>
-          <div style={{fontSize:10,color:"#4a6080",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>TOP ITEMS THIS SHIFT</div>
+          <div style={{fontSize:10,color:"#4a6080",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>{t("topItemsTitle").toUpperCase()}</div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{sm.topItems.slice(0,5).map(i=>(
             <span key={i.name} style={{background:"#1a2438",borderRadius:6,padding:"4px 10px",fontSize:11,color:"#9198a1"}}>
               {i.em} {i.name} <strong style={{color:"#f0a500"}}>×{i.qty}</strong>

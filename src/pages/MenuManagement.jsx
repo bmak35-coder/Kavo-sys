@@ -4,6 +4,7 @@ import { MenuService, ModifierService, SEED_MODIFIER_GROUPS } from "../db/servic
 import { RecipeService } from "../db/services/inventory.js";
 import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
 import { useTenant } from "../contexts/TenantProvider.jsx";
+import { useLang } from "../i18n/LanguageContext.jsx";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Menu Management  ·  v1.0
@@ -51,6 +52,7 @@ const CAT_ICONS = ["☕","🧋","🍔","🍰","⭐","🌮","🍕","🥗","🍷",
 //   MAIN COMPONENT
 // ══════════════════════════════════════════════════════
 export default function MenuManagement({ onBack, onNavigate }) {
+  const { t } = useLang();
   const { user } = useAuth();
   const sym = "$";
   
@@ -211,16 +213,16 @@ export default function MenuManagement({ onBack, onNavigate }) {
 
       {/* ═══ HEADER ═══ */}
       <header style={{ background:C.surf, borderBottom:`2px solid ${C.acc}`, padding:"0 16px", height:54, display:"flex", alignItems:"center", gap:10, flexShrink:0, flexWrap:"wrap" }}>
-        <button className="mm-btn" onClick={onBack} style={Ghost(C.muted,true)}>← Back</button>
+        <button className="mm-btn" onClick={onBack} style={Ghost(C.muted,true)}>{t("back")}</button>
         <div style={{ width:1, height:24, background:C.bdr }}/>
         <span style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:900, fontSize:17, color:C.acc, letterSpacing:"0.07em" }}>KAVO<span style={{color:C.text,opacity:0.3}}>-SYS</span></span>
-        <span style={{ fontSize:10, fontWeight:800, color:C.muted, letterSpacing:"0.1em" }}>MENU MANAGER</span>
+        <span style={{ fontSize:10, fontWeight:800, color:C.muted, letterSpacing:"0.1em" }}>{t("menuTitle")}</span>
 
           <div style={{ display:"flex", gap:3, marginLeft:6 }}>
-            {TABS.map(t => (
-              <button key={t.id} className="mm-tab mm-btn" onClick={() => setTab(t.id)}
-                style={{ background:tab===t.id?C.acc+"22":"transparent", border:`1px solid ${tab===t.id?C.acc+"60":C.bdr}`, color:tab===t.id?C.acc:C.muted, borderRadius:8, padding:"5px 12px", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:"inherit", transition:"all 0.14s" }}>
-                {t.label}
+            {TABS.map(tb => (
+              <button key={tb.id} className="mm-tab mm-btn" onClick={() => setTab(tb.id)}
+                style={{ background:tab===tb.id?C.acc+"22":"transparent", border:`1px solid ${tab===tb.id?C.acc+"60":C.bdr}`, color:tab===tb.id?C.acc:C.muted, borderRadius:8, padding:"5px 12px", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:"inherit", transition:"all 0.14s" }}>
+                {tb.id==="items"?t("menuTabItems"):tb.id==="categories"?t("menuTabCategories"):t("menuTabModifiers")}
               </button>
             ))}
           </div>
@@ -228,13 +230,13 @@ export default function MenuManagement({ onBack, onNavigate }) {
           <div style={{ flex:1 }}/>
           <div style={{ display:"flex", gap:7, alignItems:"center" }}>
             {tab==="items" && (
-              <button className="mm-btn" onClick={() => { setSelItem(null); setModal("editItem"); }} style={Btn(C.acc)}>+ New Item</button>
+              <button className="mm-btn" onClick={() => { setSelItem(null); setModal("editItem"); }} style={Btn(C.acc)}>{t("newItemBtn")}</button>
             )}
             {tab==="categories" && (
-              <button className="mm-btn" onClick={() => { setSelCat(null); setModal("editCat"); }} style={Btn(C.acc)}>+ New Category</button>
+              <button className="mm-btn" onClick={() => { setSelCat(null); setModal("editCat"); }} style={Btn(C.acc)}>{t("newCategoryBtn")}</button>
             )}
             {tab==="modifiers" && (
-              <button className="mm-btn" onClick={() => { setSelMod(null); setModal("editMod"); }} style={Btn(C.acc)}>+ New Group</button>
+              <button className="mm-btn" onClick={() => { setSelMod(null); setModal("editMod"); }} style={Btn(C.acc)}>{t("newGroupBtn")}</button>
             )}
           </div>
         </header>
@@ -249,12 +251,12 @@ export default function MenuManagement({ onBack, onNavigate }) {
                 {/* Stats row */}
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:8, marginBottom:14 }}>
                   {[
-                    { label:"Total Items",  val:stats.total,           col:C.info,    filter:"all"      },
-                    { label:"Active",       val:stats.active,          col:C.success, filter:"active"   },
-                    { label:"Inactive",     val:stats.inactive,        col:C.muted,   filter:"inactive" },
-                    { label:"Out of Stock", val:stats.oos,             col:C.danger,  filter:"oos"      },
-                    { label:"Favorites",    val:stats.fav,             col:C.warn,    filter:"fav"      },
-                    { label:"Avg Price",    val:CUR(stats.avgPrice,sym),col:C.acc,    filter:null        },
+                    { label:t("menuStatsTotal"),    val:stats.total,           col:C.info,    filter:"all"      },
+                    { label:t("menuStatsActive"),   val:stats.active,          col:C.success, filter:"active"   },
+                    { label:t("menuStatsInactive"), val:stats.inactive,        col:C.muted,   filter:"inactive" },
+                    { label:t("menuStatsOutStock"), val:stats.oos,             col:C.danger,  filter:"oos"      },
+                    { label:t("menuStatsFavorites"),val:stats.fav,             col:C.warn,    filter:"fav"      },
+                    { label:t("menuStatsAvgPrice"), val:CUR(stats.avgPrice,sym),col:C.acc,   filter:null        },
                   ].map(s => (
                     <div key={s.label}
                       onClick={() => s.filter && setStatusFil(statusFil===s.filter?"all":s.filter)}
@@ -273,26 +275,26 @@ export default function MenuManagement({ onBack, onNavigate }) {
                     {search && <button onClick={()=>setSearch("")} style={{ position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16 }}>✕</button>}
                   </div>
                   <select value={catFil} onChange={e=>setCatFil(e.target.value)} style={{ ...Sel, width:140 }}>
-                    <option value="all">All Categories</option>
+                    <option value="all">{t("allCategories")}</option>
                     {cats.filter(c=>c.id!=="all").map(c => <option key={c.id} value={c.id}>{c.icon||"📂"} {c.name}</option>)}
                   </select>
                   <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ ...Sel, width:130 }}>
-                    <option value="name">Sort: Name</option>
-                    <option value="price">Sort: Price ↓</option>
-                    <option value="margin">Sort: Margin ↓</option>
-                    <option value="cat">Sort: Category</option>
+                    <option value="name">{t("sortName")}</option>
+                    <option value="price">{t("sortPriceDesc")}</option>
+                    <option value="margin">{t("sortMarginDesc")}</option>
+                    <option value="cat">{t("sortCategory")}</option>
                   </select>
                   <span style={{ fontSize:11, color:C.muted }}>{visible.length}/{items.length} items</span>
                 </div>
 
                 {/* Items table */}
                 {visible.length === 0 ? (
-                  <EmptyMsg icon="🍽" msg="No items match. Click + New Item to add."/>
+                  <EmptyMsg icon="🍽" msg={t("noItemsFound")}/>
                 ) : (
                   <div style={{ background:C.card, border:`1px solid ${C.bdr}`, borderRadius:12, overflow:"hidden" }}>
                     {/* Table header */}
                     <div style={{ display:"grid", gridTemplateColumns:"48px 1fr 90px 80px 80px 72px 72px 72px 130px", gap:0, padding:"8px 14px", borderBottom:`1px solid ${C.bdr}`, background:"#0a1020" }}>
-                      {["","Item","Category","Price","Cost","Margin","Active","Stock","Actions"].map(h => (
+                      {["",t("name"),t("category"),t("price"),t("cost"),t("colMargin"),t("active"),t("colStock"),t("actions")].map(h => (
                         <span key={h} style={{ fontSize:9, color:C.muted, fontWeight:700, letterSpacing:"0.08em" }}>{h}</span>
                       ))}
                     </div>
@@ -348,11 +350,11 @@ export default function MenuManagement({ onBack, onNavigate }) {
 
                           {/* Actions */}
                           <div style={{ display:"flex", gap:4 }}>
-                            <button className="mm-btn" onClick={() => { setSelItem(item); setModal("editItem"); }} style={Ghost(C.info,true)}>✏ Edit</button>
+                            <button className="mm-btn" onClick={() => { setSelItem(item); setModal("editItem"); }} style={Ghost(C.info,true)}>{t("edit")}</button>
                             <button className="mm-btn" onClick={() => quickToggle(item.id,"favorite")} style={{ ...Ghost(item.favorite?C.warn:C.muted,true), fontSize:13, padding:"4px 7px" }} title={item.favorite?"Unmark favorite":"Mark as favorite"}>
                               {item.favorite?"⭐":"☆"}
                             </button>
-                            <button className="mm-btn" onClick={async () => { 
+                            <button className="mm-btn" onClick={async () => {
                               if(window.confirm(`Delete "${item.name}"?`)) {
                                 try {
                                   if (useFirebase) {
@@ -360,8 +362,8 @@ export default function MenuManagement({ onBack, onNavigate }) {
                                   } else {
                                     await MenuService.delete(item.id);
                                   }
-                                  reload(); 
-                                  showToast("Item deleted","warn");
+                                  reload();
+                                  showToast(t("itemDeleted"),"warn");
                                 } catch(e) {
                                   console.error('Error deleting item:', e);
                                   showToast('Error deleting item', 'error');
@@ -389,7 +391,7 @@ export default function MenuManagement({ onBack, onNavigate }) {
                           <div style={{ fontSize:32 }}>{c.icon||"📂"}</div>
                           <div style={{ display:"flex", gap:5 }}>
                             <button className="mm-btn" onClick={() => { setSelCat(c); setModal("editCat"); }} style={Ghost(C.info,true)}>✏</button>
-                            <button className="mm-btn" onClick={async () => { 
+                            <button className="mm-btn" onClick={async () => {
                               if(window.confirm(`Delete category "${c.name}"?`)) {
                                 try {
                                   if (useFirebase) {
@@ -397,8 +399,8 @@ export default function MenuManagement({ onBack, onNavigate }) {
                                   } else {
                                     await MenuService.deleteCategory(c.id);
                                   }
-                                  reload(); 
-                                  showToast("Category deleted","warn");
+                                  reload();
+                                  showToast(t("categoryItemDeleted"),"warn");
                                 } catch(e) {
                                   console.error('Error deleting category:', e);
                                   showToast('Error deleting category', 'error');
@@ -418,7 +420,7 @@ export default function MenuManagement({ onBack, onNavigate }) {
                     onMouseEnter={e=>e.currentTarget.style.opacity="0.8"}
                     onMouseLeave={e=>e.currentTarget.style.opacity="0.5"}>
                     <span style={{ fontSize:28 }}>+</span>
-                    <span style={{ fontSize:12, color:C.muted }}>Add Category</span>
+                    <span style={{ fontSize:12, color:C.muted }}>{t("newCategoryBtn")}</span>
                   </div>
                 </div>
               </div>
@@ -437,12 +439,12 @@ export default function MenuManagement({ onBack, onNavigate }) {
                         <div>
                           <div style={{ fontWeight:800, color:C.text, fontSize:14 }}>{mg.name}</div>
                           <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>
-                            {mg.required?"Required":"Optional"} · {mg.multiSelect?"Multi-select":"Single select"}
+                            {mg.required?t("requiredToggle"):"Optional"} · {mg.multiSelect?t("multiSelectOption"):t("pickOne")}
                           </div>
                         </div>
                         <div style={{ display:"flex", gap:5 }}>
                           <button className="mm-btn" onClick={() => { setSelMod(mg); setModal("editMod"); }} style={Ghost(C.info,true)}>✏</button>
-                          <button className="mm-btn" onClick={async () => { 
+                          <button className="mm-btn" onClick={async () => {
                             if(window.confirm(`Delete "${mg.name}"?`)) {
                               try {
                                 if (useFirebase) {
@@ -450,8 +452,8 @@ export default function MenuManagement({ onBack, onNavigate }) {
                                 } else {
                                   await ModifierService.delete(mg.id);
                                 }
-                                reload(); 
-                                showToast("Group deleted","warn");
+                                reload();
+                                showToast(t("groupDeleted"),"warn");
                               } catch(e) {
                                 console.error('Error deleting modifier group:', e);
                                 showToast('Error deleting group', 'error');
@@ -494,7 +496,7 @@ export default function MenuManagement({ onBack, onNavigate }) {
                 console.log('Item saved to IndexedDB:', saved);
               }
               reload(); setModal(null);
-              showToast(selItem ? "Item updated" : "Item created");
+              showToast(selItem ? t("itemUpdated") : t("itemAdded"));
             } catch(e) {
               console.error('Error saving item:', e);
               showToast('Error saving item', 'error');
@@ -516,7 +518,7 @@ export default function MenuManagement({ onBack, onNavigate }) {
                 console.log('Category saved to IndexedDB:', saved);
               }
               reload(); setModal(null);
-              showToast(selCat ? "Category updated" : "Category created");
+              showToast(selCat ? t("categoryUpdated") : t("categoryCreated"));
             } catch(e) {
               console.error('Error saving category:', e);
               showToast('Error saving category', 'error');
@@ -535,7 +537,7 @@ export default function MenuManagement({ onBack, onNavigate }) {
                 await ModifierService.save({...selMod,...data});
               }
               reload(); setModal(null);
-              showToast(selMod ? "Modifier group updated" : "Group created");
+              showToast(selMod ? t("modGroupUpdated") : t("groupCreated"));
             } catch(e) {
               console.error('Error saving modifier group:', e);
               showToast('Error saving modifier group', 'error');
@@ -558,6 +560,7 @@ export default function MenuManagement({ onBack, onNavigate }) {
    ITEM FORM MODAL
 ══════════════════════════════════════════════════════ */
 function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave, onClose }) {
+  const { t } = useLang();
   const [f, setF] = useState({
     id:             item?.id || `m_${Date.now()}`,
     name:           item?.name || "",
@@ -602,10 +605,10 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
   };
 
   return (
-    <MModal title={item ? `✏ Edit — ${item.name}` : "🆕 New Menu Item"} onClose={onClose} wide>
+    <MModal title={item ? `${t("editMenuItemTitle")} — ${item.name}` : t("newMenuItemTitle")} onClose={onClose} wide>
       {/* Sub-tabs */}
       <div style={{ display:"flex", gap:5, marginBottom:16, borderBottom:`1px solid ${C.bdr}`, paddingBottom:10 }}>
-        {[["basic","📋 Basic"],["modifiers","⚙ Modifiers"],["recipe","🔗 Recipe & Cost"]].map(([id,label]) => (
+        {[["basic",t("tabBasic")],["modifiers",t("tabModifiersTab")],["recipe",t("tabRecipeCost")]].map(([id,label]) => (
           <button key={id} className="mm-btn" onClick={() => setActiveTab(id)}
             style={{ background:activeTab===id?C.acc+"22":"transparent", border:`1px solid ${activeTab===id?C.acc+"60":C.bdr}`, color:activeTab===id?C.acc:C.muted, borderRadius:8, padding:"5px 13px", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:"inherit" }}>
             {label}
@@ -623,11 +626,11 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
           )}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <div>
-              <FLabel>ITEM NAME *</FLabel>
+              <FLabel>{t("itemNameRequired")}</FLabel>
               <input value={f.name} onChange={e=>set("name",e.target.value)} placeholder="e.g. Cappuccino" style={Inp}/>
             </div>
             <div>
-              <FLabel>CATEGORY</FLabel>
+              <FLabel>{t("category").toUpperCase()}</FLabel>
               <select value={f.cat} onChange={e=>set("cat",e.target.value)} style={Sel}>
                 {cats.filter(c=>c.id!=="all").length === 0 ? (
                   <option value="">No categories - create one first</option>
@@ -637,11 +640,11 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
               </select>
             </div>
             <div>
-              <FLabel>SELLING PRICE *</FLabel>
+              <FLabel>{t("sellingPriceRequired")}</FLabel>
               <input type="number" min="0" step="0.01" value={f.price} onChange={e=>set("price",e.target.value)} placeholder="0.00" style={{...Inp, fontFamily:"'JetBrains Mono',monospace", fontSize:15}}/>
             </div>
             <div>
-              <FLabel>COST PRICE (manual override)</FLabel>
+              <FLabel>{t("costPriceOverride")}</FLabel>
               <input type="number" min="0" step="0.01" value={f.costPrice} onChange={e=>set("costPrice",e.target.value)} placeholder="0.00 (or use Recipe)" style={{...Inp, fontFamily:"'JetBrains Mono',monospace"}}/>
             </div>
           </div>
@@ -650,9 +653,9 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
           {price > 0 && effCost > 0 && (
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, margin:"12px 0", padding:"10px 14px", background:C.bg, borderRadius:10 }}>
               {[
-                { l:"Selling Price",  v:CUR(price,sym),    c:C.acc },
-                { l:"Est. Cost",      v:CUR(effCost,sym),  c:C.muted },
-                { l:"Profit Margin",  v:PCT(margin),       c:margin>=60?C.success:margin>=30?C.warn:C.danger },
+                { l:t("sellingPriceLabel"), v:CUR(price,sym),    c:C.acc },
+                { l:t("estCostLabel"),      v:CUR(effCost,sym),  c:C.muted },
+                { l:t("profitMarginLabel"), v:PCT(margin),       c:margin>=60?C.success:margin>=30?C.warn:C.danger },
               ].map(m => (
                 <div key={m.l} style={{ textAlign:"center" }}>
                   <div style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:900, fontSize:16, color:m.c }}>{m.v}</div>
@@ -663,14 +666,14 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
           )}
 
           <div style={{ marginBottom:12 }}>
-            <FLabel>DESCRIPTION</FLabel>
+            <FLabel>{t("descriptionField")}</FLabel>
             <input value={f.description} onChange={e=>set("description",e.target.value)} placeholder="Optional item description…" style={Inp}/>
           </div>
 
           {/* Emoji + Color picker */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
             <div>
-              <FLabel>EMOJI ICON</FLabel>
+              <FLabel>{t("emojiIconField")}</FLabel>
               <div style={{ position:"relative" }}>
                 <button className="mm-btn" onClick={() => setShowEmoji(!showEmoji)}
                   style={{ ...Inp, textAlign:"left", display:"flex", alignItems:"center", gap:10, cursor:"pointer", border:`1px solid ${C.bdr}` }}>
@@ -690,7 +693,7 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
               </div>
             </div>
             <div>
-              <FLabel>TILE COLOR</FLabel>
+              <FLabel>{t("tileColorField")}</FLabel>
               <div style={{ display:"flex", flexWrap:"wrap", gap:5, padding:"6px 10px", background:C.card, borderRadius:8, border:`1px solid ${C.bdr}` }}>
                 {BG_PALETTE.map(bg => (
                   <button key={bg} className="mm-btn" onClick={() => set("bg",bg)}
@@ -706,9 +709,9 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
           {/* Toggles */}
           <div style={{ display:"flex", gap:20, marginBottom:8 }}>
             {[
-              { label:"Active on POS",   key:"active",     onColor:C.success },
-              { label:"Favorite",        key:"favorite",   onColor:C.warn    },
-              { label:"Out of Stock",    key:"outOfStock", onColor:C.danger, inverted:true },
+              { label:t("activeOnPOS"),      key:"active",     onColor:C.success },
+              { label:t("favoriteItem"),     key:"favorite",   onColor:C.warn    },
+              { label:t("outOfStockToggle"), key:"outOfStock", onColor:C.danger, inverted:true },
             ].map(tog => (
               <div key={tog.key} style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <Toggle on={tog.inverted ? !f[tog.key] : f[tog.key]} onChange={() => set(tog.key, !f[tog.key])} onColor={tog.onColor}/>
@@ -739,7 +742,7 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
                   <div style={{ flex:1 }}>
                     <div style={{ fontWeight:700, color:on?C.acc:C.text, fontSize:13, marginBottom:4 }}>{mg.name}</div>
                     <div style={{ fontSize:10, color:C.muted, marginBottom:5 }}>
-                      {mg.required?"Required":"Optional"} · {mg.multiSelect?"Multi-select":"Pick one"}
+                      {mg.required?t("requiredToggle"):"Optional"} · {mg.multiSelect?t("multiSelectOption"):t("pickOne")}
                     </div>
                     <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
                       {safeArr(mg.options).map(opt => (
@@ -789,15 +792,15 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
       {/* Footer */}
       <div style={{ display:"flex", gap:8, marginTop:16, borderTop:`1px solid ${C.bdr}`, paddingTop:14 }}>
         <button className="mm-btn" onClick={() => {
-          if(!f.name.trim()){alert("Item name is required");return;}
-          if(!f.price && f.price!==0){alert("Selling price is required");return;}
-          if(+f.price <= 0){alert("Selling price must be greater than 0");return;}
+          if(!f.name.trim()){alert(t("itemNameRequired"));return;}
+          if(!f.price && f.price!==0){alert(t("sellingPriceRequired"));return;}
+          if(+f.price <= 0){alert(t("sellingPriceRequired"));return;}
           if(f.costPrice !== "" && +f.costPrice < 0){alert("Cost price cannot be negative");return;}
           onSave(f);
         }} style={{...Btn(C.acc),flex:1}}>
-          {item ? "💾 Update Item" : "✅ Create Item"}
+          {item ? t("updateItemBtn") : t("createItemBtn")}
         </button>
-        <button className="mm-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>
+        <button className="mm-btn" onClick={onClose} style={{...Ghost(),flex:1}}>{t("cancel")}</button>
       </div>
     </MModal>
   );
@@ -805,19 +808,20 @@ function ItemFormModal({ item, cats, modGroups, sym, getCost, getMargin, onSave,
 
 /* ── CATEGORY FORM MODAL ─────────────────────────────*/
 function CategoryFormModal({ cat, onSave, onClose }) {
+  const { t } = useLang();
   const [name,      setName]      = useState(cat?.name || "");
   const [icon,      setIcon]      = useState(cat?.icon || "📂");
   const [sortOrder, setSortOrder] = useState(cat?.sortOrder ?? 99);
   const [showEmoji, setShowEmoji] = useState(false);
 
   return (
-    <MModal title={cat ? "Edit Category" : "New Category"} onClose={onClose}>
+    <MModal title={cat ? t("editCategoryTitle") : t("newCategoryTitle")} onClose={onClose}>
       <div style={{ marginBottom:12 }}>
-        <FLabel>CATEGORY NAME *</FLabel>
+        <FLabel>{t("categoryNameRequired")}</FLabel>
         <input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Hot Drinks" style={Inp}/>
       </div>
       <div style={{ marginBottom:12 }}>
-        <FLabel>ICON</FLabel>
+        <FLabel>{t("iconField")}</FLabel>
         <div style={{ position:"relative" }}>
           <button className="mm-btn" onClick={() => setShowEmoji(!showEmoji)}
             style={{ ...Inp, textAlign:"left", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
@@ -837,12 +841,12 @@ function CategoryFormModal({ cat, onSave, onClose }) {
         </div>
       </div>
       <div style={{ marginBottom:16 }}>
-        <FLabel>SORT ORDER</FLabel>
+        <FLabel>{t("sortOrderField")}</FLabel>
         <input type="number" value={sortOrder} onChange={e=>setSortOrder(+e.target.value)} style={Inp}/>
       </div>
       <div style={{ display:"flex", gap:8 }}>
-        <button className="mm-btn" onClick={() => { if(!name.trim()){alert("Name required");return;} onSave({name,icon,sortOrder}); }} style={{...Btn(C.acc),flex:1}}>Save</button>
-        <button className="mm-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>
+        <button className="mm-btn" onClick={() => { if(!name.trim()){alert("Name required");return;} onSave({name,icon,sortOrder}); }} style={{...Btn(C.acc),flex:1}}>{t("save")}</button>
+        <button className="mm-btn" onClick={onClose} style={{...Ghost(),flex:1}}>{t("cancel")}</button>
       </div>
     </MModal>
   );
@@ -850,6 +854,7 @@ function CategoryFormModal({ cat, onSave, onClose }) {
 
 /* ── MODIFIER GROUP MODAL ────────────────────────────*/
 function ModifierGroupModal({ group, sym, onSave, onClose }) {
+  const { t } = useLang();
   const [name,        setName]        = useState(group?.name || "");
   const [required,    setRequired]    = useState(!!group?.required);
   const [multiSelect, setMultiSelect] = useState(!!group?.multiSelect);
@@ -860,23 +865,23 @@ function ModifierGroupModal({ group, sym, onSave, onClose }) {
   const updateOpt = (i, field, val) => setOptions(p => p.map((o,idx) => idx===i ? {...o,[field]:val} : o));
 
   return (
-    <MModal title={group ? "Edit Modifier Group" : "New Modifier Group"} onClose={onClose} wide>
+    <MModal title={group ? t("editModGroupTitle") : t("newModGroupTitle")} onClose={onClose} wide>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:14 }}>
         <div>
-          <FLabel>GROUP NAME *</FLabel>
+          <FLabel>{t("groupNameRequired")}</FLabel>
           <input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Size" style={Inp}/>
         </div>
         <div style={{ display:"flex", gap:10, alignItems:"flex-end", paddingBottom:1 }}>
           <div style={{ flex:1 }}>
-            <FLabel>SELECTION TYPE</FLabel>
+            <FLabel>{t("selectionType")}</FLabel>
             <select value={multiSelect?"multi":"single"} onChange={e=>setMultiSelect(e.target.value==="multi")} style={Sel}>
-              <option value="single">Pick one</option>
-              <option value="multi">Multi-select</option>
+              <option value="single">{t("pickOne")}</option>
+              <option value="multi">{t("multiSelectOption")}</option>
             </select>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
             <Toggle on={required} onChange={() => setRequired(!required)} onColor={C.warn}/>
-            <span style={{ fontSize:12, color:C.sub }}>Required</span>
+            <span style={{ fontSize:12, color:C.sub }}>{t("requiredToggle")}</span>
           </div>
         </div>
       </div>
@@ -884,16 +889,16 @@ function ModifierGroupModal({ group, sym, onSave, onClose }) {
       {/* Options list */}
       <div style={{ marginBottom:14 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-          <FLabel>OPTIONS</FLabel>
-          <button className="mm-btn" onClick={addOpt} style={Btn(C.acc,undefined,true)}>+ Add Option</button>
+          <FLabel>{t("optionsLabel")}</FLabel>
+          <button className="mm-btn" onClick={addOpt} style={Btn(C.acc,undefined,true)}>{t("addOptionBtn")}</button>
         </div>
         {options.length === 0
-          ? <div style={{ textAlign:"center", padding:20, color:C.muted, fontSize:12 }}>Click "+ Add Option" to add choices.</div>
+          ? <div style={{ textAlign:"center", padding:20, color:C.muted, fontSize:12 }}>{t("addOptionBtn")}</div>
           : (
             <>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 100px 24px", gap:8, marginBottom:6 }}>
-                <span style={{ fontSize:9, color:C.muted, fontWeight:700, letterSpacing:"0.08em" }}>OPTION LABEL</span>
-                <span style={{ fontSize:9, color:C.muted, fontWeight:700, letterSpacing:"0.08em" }}>PRICE ADJ. ({sym})</span>
+                <span style={{ fontSize:9, color:C.muted, fontWeight:700, letterSpacing:"0.08em" }}>{t("optionLabelField")}</span>
+                <span style={{ fontSize:9, color:C.muted, fontWeight:700, letterSpacing:"0.08em" }}>{t("priceAdjField")} ({sym})</span>
                 <span/>
               </div>
               {options.map((opt, i) => (
@@ -912,8 +917,8 @@ function ModifierGroupModal({ group, sym, onSave, onClose }) {
       <div style={{ display:"flex", gap:8 }}>
         <button className="mm-btn"
           onClick={() => { if(!name.trim()){alert("Name required");return;} onSave({name,required,multiSelect,options}); }}
-          style={{...Btn(C.acc),flex:1}}>Save Group</button>
-        <button className="mm-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>
+          style={{...Btn(C.acc),flex:1}}>{t("saveGroupBtn")}</button>
+        <button className="mm-btn" onClick={onClose} style={{...Ghost(),flex:1}}>{t("cancel")}</button>
       </div>
     </MModal>
   );

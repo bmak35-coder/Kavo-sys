@@ -6,6 +6,7 @@ import {
   InventoryService, RecipeService, StockLogService,
   LOG_TYPES, UNITS, unitLabel,
 } from "../db/services/inventory.js";
+import { useLang } from "../i18n/LanguageContext.jsx";
 
 /* ══════════════════════════════════════════════════════
    KAVO-SYS  ·  Inventory & Stock Management  ·  v1.0
@@ -65,6 +66,7 @@ function stockStatus(item){
 //   MAIN COMPONENT
 // ══════════════════════════════════════════════════════
 export default function Inventory({ onBack, onNavigate = () => {} }) {
+  const { t } = useLang();
   const { user, can } = useAuth();
   const { tenantId } = useTenant();
   const firebaseServices = useFirebaseServices();
@@ -168,17 +170,17 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
 
       {/* ═══ HEADER ═══ */}
       <header style={{background:C.surf,borderBottom:`2px solid ${C.acc}`,padding:"0 16px",height:54,display:"flex",alignItems:"center",gap:10,flexShrink:0,flexWrap:"wrap"}}>
-        <button className="iv-btn" onClick={onBack} style={{...Ghost(C.muted,true)}}>← POS</button>
+        <button className="iv-btn" onClick={onBack} style={{...Ghost(C.muted,true)}}>{t("backToPOS")}</button>
         <div style={{width:1,height:24,background:C.bdr}}/>
         <span style={{fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:900,fontSize:17,color:C.acc,letterSpacing:"0.07em"}}>KAVO<span style={{color:C.text,opacity:0.3}}>-SYS</span></span>
-        <span style={{fontSize:10,fontWeight:800,color:C.muted,letterSpacing:"0.1em"}}>INVENTORY</span>
+        <span style={{fontSize:10,fontWeight:800,color:C.muted,letterSpacing:"0.1em"}}>{t("inventoryTitle")}</span>
 
         {/* Tabs */}
         <div style={{display:"flex",gap:3,marginLeft:6,flexWrap:"wrap"}}>
-          {TABS.filter(t=>!isKitchen||(t.id==="items")).map(t=>(
-            <button key={t.id} className="iv-tab iv-btn" onClick={()=>setTab(t.id)}
-              style={{background:tab===t.id?C.acc+"22":"transparent",border:`1px solid ${tab===t.id?C.acc+"60":C.bdr}`,color:tab===t.id?C.acc:C.muted,borderRadius:8,padding:"5px 12px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",transition:"all 0.14s"}}>
-              {t.label}
+          {TABS.filter(tb=>!isKitchen||(tb.id==="items")).map(tb=>(
+            <button key={tb.id} className="iv-tab iv-btn" onClick={()=>setTab(tb.id)}
+              style={{background:tab===tb.id?C.acc+"22":"transparent",border:`1px solid ${tab===tb.id?C.acc+"60":C.bdr}`,color:tab===tb.id?C.acc:C.muted,borderRadius:8,padding:"5px 12px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",transition:"all 0.14s"}}>
+              {tb.id==="dashboard"?t("dashboard"):tb.id==="items"?t("stockItems"):tb.id==="recipes"?t("recipes"):tb.id==="logs"?t("logs"):t("reportsTitle")}
             </button>
           ))}
         </div>
@@ -194,12 +196,12 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
 
         {/* Purchasing button (admin only) */}
         {isAdmin && (
-          <button className="iv-btn" onClick={()=>onNavigate("purchasing")} style={{...Ghost(C.acc,true),border:`1px solid ${C.acc}40`}}>🛒 Purchasing</button>
+          <button className="iv-btn" onClick={()=>onNavigate("purchasing")} style={{...Ghost(C.acc,true),border:`1px solid ${C.acc}40`}}>{t("purchasingLink")}</button>
         )}
 
         {/* Add item button (admin only) */}
         {isAdmin && tab==="items" && (
-          <button className="iv-btn" onClick={()=>{setSelItem(null);setModal("addItem");}} style={{...Btn(C.acc)}}>+ Add Item</button>
+          <button className="iv-btn" onClick={()=>{setSelItem(null);setModal("addItem");}} style={{...Btn(C.acc)}}>{t("addItemBtn")}</button>
         )}
 
         {/* User badge */}
@@ -219,11 +221,11 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
                 {/* Metric cards */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(175px,1fr))",gap:10,marginBottom:14}}>
                   {[
-                    {icon:"📦",label:"Total Items",    val:stats.total,          col:C.info,  mono:false},
-                    {icon:"💰",label:"Stock Value",    val:CUR(stats.totalValue), col:C.acc,   mono:true},
-                    {icon:"⚠",label:"Low Stock",      val:stats.low,            col:C.warn,  mono:false},
-                    {icon:"🚫",label:"Out of Stock",   val:stats.out,            col:C.danger,mono:false},
-                    {icon:"🔥",label:"Used Today",     val:todayUse.length+" items",col:C.success,mono:false},
+                    {icon:"📦",label:t("totalItems"),    val:stats.total,          col:C.info,  mono:false},
+                    {icon:"💰",label:t("stockValue"),    val:CUR(stats.totalValue), col:C.acc,   mono:true},
+                    {icon:"⚠",label:t("lowStock"),      val:stats.low,            col:C.warn,  mono:false},
+                    {icon:"🚫",label:t("outOfStock"),   val:stats.out,            col:C.danger,mono:false},
+                    {icon:"🔥",label:t("usedToday"),     val:todayUse.length+" "+t("itemsLabel"),col:C.success,mono:false},
                   ].map(m=>(
                     <div key={m.label} style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:"14px 16px"}}>
                       <div style={{fontSize:18,marginBottom:5}}>{m.icon}</div>
@@ -236,9 +238,9 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
                   {/* Low stock alerts */}
                   <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-                    <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>⚠ STOCK ALERTS</div>
+                    <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>{t("stockAlertsTitle")}</div>
                     {lowItems.length===0
-                      ? <div style={{color:C.muted,fontSize:12,textAlign:"center",padding:20}}>✅ All items well-stocked</div>
+                      ? <div style={{color:C.muted,fontSize:12,textAlign:"center",padding:20}}>{t("allItemsWellStocked")}</div>
                       : lowItems.slice(0,8).map(item=>{
                           const st=stockStatus(item);
                           const col=ALERT_COLORS[st];
@@ -250,7 +252,7 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
                               </div>
                               <div style={{textAlign:"right"}}>
                                 <div style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:800,color:col,fontSize:13}}>{unitLabel(item.currentStock,item.unit)}</div>
-                                <div style={{fontSize:9,color:col,fontWeight:700,textTransform:"uppercase"}}>{st==="out"?"Out of Stock":st}</div>
+                                <div style={{fontSize:9,color:col,fontWeight:700,textTransform:"uppercase"}}>{st==="out"?t("outOfStock"):st}</div>
                               </div>
                             </div>
                           );
@@ -260,9 +262,9 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
 
                   {/* Today's usage */}
                   <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-                    <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>🔥 TODAY'S USAGE</div>
+                    <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>{t("todayUsageTitle")}</div>
                     {todayUse.length===0
-                      ? <div style={{color:C.muted,fontSize:12,textAlign:"center",padding:20}}>No usage recorded today</div>
+                      ? <div style={{color:C.muted,fontSize:12,textAlign:"center",padding:20}}>{t("noUsageToday")}</div>
                       : todayUse.slice(0,8).map((u,i)=>{
                           const maxQ=todayUse[0]?.total||1;
                           return(
@@ -283,7 +285,7 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
 
                 {/* Stock value by category */}
                 <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-                  <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>💰 STOCK VALUE BY CATEGORY</div>
+                  <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>{t("stockValueByCatTitle")}</div>
                   <CategoryValueChart items={items}/>
                 </div>
               </div>
@@ -299,7 +301,7 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
                     {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16}}>✕</button>}
                   </div>
                   <select value={catFil} onChange={e=>setCatFil(e.target.value)} style={{...Sel,width:140}}>
-                    <option value="All">All Categories</option>
+                    <option value="All">{t("allCategories")}</option>
                     {INV_CATS.map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
                   <span style={{fontSize:11,color:C.muted}}>{visible.length} item{visible.length!==1?"s":""}</span>
@@ -354,71 +356,71 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
 
       {/* ═══ MODALS ═══ */}
       {modal==="addItem" && (
-        <ItemFormModal title="Add Inventory Item" item={null}
-          onSave={async(data)=>{ 
+        <ItemFormModal title={t("addInventoryItem")} item={null}
+          onSave={async(data)=>{
             if (useFirebase) {
               await firebaseServices.inventory.save(data);
             } else {
               await InventoryService.save(data);
             }
-            reload(); setModal(null); showToast("Item added"); 
+            reload(); setModal(null); showToast(t("itemAdded"));
           }}
           onClose={()=>setModal(null)}/>
       )}
       {modal==="editItem" && selItem && (
-        <ItemFormModal title="Edit Item" item={selItem}
-          onSave={async(data)=>{ 
+        <ItemFormModal title={t("editInventoryItem")} item={selItem}
+          onSave={async(data)=>{
             if (useFirebase) {
               await firebaseServices.inventory.save({...selItem,...data});
             } else {
               await InventoryService.save({...selItem,...data});
             }
-            reload(); setModal(null); showToast("Item updated"); 
+            reload(); setModal(null); showToast(t("itemUpdated"));
           }}
           onClose={()=>setModal(null)}
-          onDelete={isAdmin?async()=>{ 
+          onDelete={isAdmin?async()=>{
             if (useFirebase) {
               await firebaseServices.inventory.delete(selItem.id);
             } else {
               await InventoryService.delete(selItem.id);
             }
-            reload(); setModal(null); showToast("Item deleted","warn"); 
+            reload(); setModal(null); showToast(t("itemDeleted"),"warn");
           }:null}/>
       )}
       {modal==="addStock" && selItem && (
-        <StockActionModal title="Add Stock" item={selItem} action="add"
-          onSave={async(qty,note)=>{ 
+        <StockActionModal title={t("addStock")} item={selItem} action="add"
+          onSave={async(qty,note)=>{
             if (useFirebase) {
               await firebaseServices.inventory.addStock(selItem.id,qty,note,user?.name);
             } else {
               await InventoryService.addStock(selItem.id,qty,note,user?.name);
             }
-            reload(); setModal(null); showToast(`+${qty} ${selItem.unit} added`); 
+            reload(); setModal(null); showToast(`+${qty} ${selItem.unit} added`);
           }}
           onClose={()=>setModal(null)}/>
       )}
       {modal==="adjust" && selItem && (
-        <StockActionModal title="Adjust Stock" item={selItem} action="adjust"
-          onSave={async(qty,note)=>{ 
-            const before_=selItem.currentStock; 
+        <StockActionModal title={t("adjustStock")} item={selItem} action="adjust"
+          onSave={async(qty,note)=>{
+            const before_=selItem.currentStock;
             if (useFirebase) {
               await firebaseServices.inventory.adjustStock(selItem.id,qty,note,user?.name);
             } else {
               await InventoryService.adjustStock(selItem.id,qty,note,user?.name);
             }
-            reload(); setModal(null); showToast("Stock adjusted"); 
+            reload(); setModal(null); showToast(t("stockAdjusted"));
           }}
           onClose={()=>setModal(null)}/>
       )}
       {modal==="waste" && selItem && (
-        <StockActionModal title="Log Waste" item={selItem} action="waste"
-          onSave={async(qty,note)=>{ 
+        <StockActionModal title={t("logWaste")} item={selItem} action="waste"
+          onSave={async(qty,note)=>{
             if (useFirebase) {
               await firebaseServices.inventory.logWaste(selItem.id,qty,note,user?.name);
             } else {
               await InventoryService.logWaste(selItem.id,qty,note,user?.name);
             }
-            reload(); setModal(null); showToast("Waste logged","warn"); 
+            reload(); setModal(null); showToast(t("wasteLogged"),"warn");
           }}
           onClose={()=>setModal(null)}/>
       )}
@@ -440,6 +442,7 @@ export default function Inventory({ onBack, onNavigate = () => {} }) {
    INVENTORY CARD
 ══════════════════════════════════════════════════════ */
 function InventoryCard({ item, isAdmin, onAddStock, onAdjust, onWaste, onEdit, onLogs }) {
+  const { t } = useLang();
   const st    = stockStatus(item);
   const col   = ALERT_COLORS[st];
   const pct   = item.minStock>0 ? Math.min(100,(item.currentStock/Math.max(item.minStock*3,1))*100) : 100;
@@ -478,11 +481,11 @@ function InventoryCard({ item, isAdmin, onAddStock, onAdjust, onWaste, onEdit, o
 
       {/* Actions */}
       <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-        {isAdmin&&<button className="iv-btn" onClick={onAddStock} style={{...Btn(C.success,"#000",true)}}>+ Add</button>}
-        {isAdmin&&<button className="iv-btn" onClick={onAdjust}  style={{...Ghost(C.info,true)}}>✏ Adjust</button>}
-        {isAdmin&&<button className="iv-btn" onClick={onWaste}   style={{...Ghost(C.warn,true)}}>🗑 Waste</button>}
-        {isAdmin&&<button className="iv-btn" onClick={onEdit}    style={{...Ghost(C.muted,true)}}>⚙ Edit</button>}
-        <button className="iv-btn" onClick={onLogs} style={{...Ghost(C.muted,true),marginLeft:"auto"}}>📋 Logs</button>
+        {isAdmin&&<button className="iv-btn" onClick={onAddStock} style={{...Btn(C.success,"#000",true)}}>{t("addItemCard")}</button>}
+        {isAdmin&&<button className="iv-btn" onClick={onAdjust}  style={{...Ghost(C.info,true)}}>{t("adjustItemCard")}</button>}
+        {isAdmin&&<button className="iv-btn" onClick={onWaste}   style={{...Ghost(C.warn,true)}}>{t("wasteItemCard")}</button>}
+        {isAdmin&&<button className="iv-btn" onClick={onEdit}    style={{...Ghost(C.muted,true)}}>{t("editItemCard")}</button>}
+        <button className="iv-btn" onClick={onLogs} style={{...Ghost(C.muted,true),marginLeft:"auto"}}>{t("logsItemCard")}</button>
       </div>
     </div>
   );
@@ -510,6 +513,7 @@ function InvFld({ label, k, type, ph, f, set }) {
 }
 
 function ItemFormModal({ title, item, onSave, onClose, onDelete }) {
+  const { t } = useLang();
   const [f, setF] = useState({
     name:         item?.name||"",
     sku:          item?.sku||"",
@@ -529,39 +533,39 @@ function ItemFormModal({ title, item, onSave, onClose, onDelete }) {
     <InvModal title={title} onClose={onClose} wide>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         <div>
-          <InvFld label="ITEM NAME *"          k="name"         ph="e.g. Coffee Beans" f={f} set={set}/>
-          <InvFld label="SKU / CODE"           k="sku"          ph="e.g. CB-001"       f={f} set={set}/>
+          <InvFld label={t("itemNameRequired")}   k="name"         ph="e.g. Coffee Beans" f={f} set={set}/>
+          <InvFld label={t("skuCodeField")}        k="sku"          ph="e.g. CB-001"       f={f} set={set}/>
           <div style={{marginBottom:12}}>
-            <label style={{display:"block",fontSize:10,color:C.muted,fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>CATEGORY</label>
+            <label style={{display:"block",fontSize:10,color:C.muted,fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>{t("category").toUpperCase()}</label>
             <select value={f.category} onChange={e=>set("category",e.target.value)} style={Sel}>
               {INV_CATS.map(c=><option key={c}>{c}</option>)}
             </select>
           </div>
           <div style={{marginBottom:12}}>
-            <label style={{display:"block",fontSize:10,color:C.muted,fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>UNIT</label>
+            <label style={{display:"block",fontSize:10,color:C.muted,fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>{t("unitField")}</label>
             <select value={f.unit} onChange={e=>set("unit",e.target.value)} style={Sel}>
               {UNITS.map(u=><option key={u}>{u}</option>)}
             </select>
           </div>
-          <InvFld label="SUPPLIER"             k="supplier"     ph="Supplier name"     f={f} set={set}/>
+          <InvFld label={t("supplierField")}       k="supplier"     ph={t("supplierName")} f={f} set={set}/>
         </div>
         <div>
-          <InvFld label="CURRENT STOCK"        k="currentStock" type="number" ph="0"   f={f} set={set}/>
-          <InvFld label="MIN STOCK ALERT"      k="minStock"     type="number" ph="0"   f={f} set={set}/>
-          <InvFld label="COST PRICE (per unit)"k="costPrice"    type="number" ph="0.00" f={f} set={set}/>
-          <InvFld label="EXPIRY DATE (optional)"k="expiryDate"  type="date"            f={f} set={set}/>
-          <InvFld label="NOTES"                k="notes"        ph="Any notes…"        f={f} set={set}/>
+          <InvFld label={t("currentStock")}        k="currentStock" type="number" ph="0"   f={f} set={set}/>
+          <InvFld label={t("minStock")}             k="minStock"     type="number" ph="0"   f={f} set={set}/>
+          <InvFld label={t("costPriceField")}       k="costPrice"    type="number" ph="0.00" f={f} set={set}/>
+          <InvFld label={t("expiryDateField")}      k="expiryDate"  type="date"            f={f} set={set}/>
+          <InvFld label={t("notes").toUpperCase()}  k="notes"        ph={t("anyNotes")}     f={f} set={set}/>
         </div>
       </div>
       <div style={{display:"flex",gap:8,marginTop:4}}>
         <button className="iv-btn" onClick={()=>{
-          if(!f.name.trim()){alert("Item name is required");return;}
+          if(!f.name.trim()){alert(t("itemNameRequired"));return;}
           if(f.currentStock !== "" && +f.currentStock < 0){alert("Current stock cannot be negative");return;}
           if(f.minStock !== "" && +f.minStock < 0){alert("Min stock alert cannot be negative");return;}
           if(f.costPrice !== "" && +f.costPrice < 0){alert("Cost price cannot be negative");return;}
           onSave(f);
-        }} style={{...Btn(C.acc),flex:1}}>Save</button>
-        <button className="iv-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>
+        }} style={{...Btn(C.acc),flex:1}}>{t("save")}</button>
+        <button className="iv-btn" onClick={onClose} style={{...Ghost(),flex:1}}>{t("cancel")}</button>
         {onDelete&&<button className="iv-btn" onClick={()=>{if(confirm("Delete this item and all its logs?")) onDelete();}} style={Btn(C.danger,"#fff")}>🗑</button>}
       </div>
     </InvModal>
@@ -570,6 +574,7 @@ function ItemFormModal({ title, item, onSave, onClose, onDelete }) {
 
 /* ── STOCK ACTION MODAL ──────────────────────────────*/
 function StockActionModal({ title, item, action, onSave, onClose }) {
+  const { t } = useLang();
   const [qty,  setQty]  = useState("");
   const [note, setNote] = useState("");
   const isAdjust = action==="adjust";
@@ -579,7 +584,7 @@ function StockActionModal({ title, item, action, onSave, onClose }) {
     <InvModal title={title} onClose={onClose}>
       <div style={{background:C.bg,borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:12}}>
         <div style={{fontWeight:700,color:C.text,marginBottom:2}}>{item.name}</div>
-        <div style={{color:C.muted}}>Current stock: <span style={{color:C.acc,fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}>{safeNum(item.currentStock).toFixed(2)} {item.unit}</span></div>
+        <div style={{color:C.muted}}>{t("currentStockLabel2")} <span style={{color:C.acc,fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}>{safeNum(item.currentStock).toFixed(2)} {item.unit}</span></div>
       </div>
       <div style={{marginBottom:12}}>
         <label style={{display:"block",fontSize:10,color:C.muted,fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>
@@ -596,7 +601,7 @@ function StockActionModal({ title, item, action, onSave, onClose }) {
         </div>
       )}
       <div style={{marginBottom:16}}>
-        <label style={{display:"block",fontSize:10,color:C.muted,fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>NOTE (optional)</label>
+        <label style={{display:"block",fontSize:10,color:C.muted,fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>{t("addStockNoteField")}</label>
         <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Reason, supplier, etc." style={Inp}/>
       </div>
       <div style={{display:"flex",gap:8}}>
@@ -606,9 +611,9 @@ function StockActionModal({ title, item, action, onSave, onClose }) {
           onSave(safeNum(qty),note);
         }}
           style={{...Btn(action==="add"?C.success:action==="waste"?C.warn:C.info,"#000"),flex:1}}>
-          {action==="add"?"+ Add Stock":action==="waste"?"Log Waste":"Adjust Stock"}
+          {action==="add"?t("addStock"):action==="waste"?t("logWaste"):t("adjustStock")}
         </button>
-        <button className="iv-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>
+        <button className="iv-btn" onClick={onClose} style={{...Ghost(),flex:1}}>{t("cancel")}</button>
       </div>
     </InvModal>
   );
@@ -616,6 +621,7 @@ function StockActionModal({ title, item, action, onSave, onClose }) {
 
 /* ── ITEM LOGS MODAL ─────────────────────────────────*/
 function ItemLogsModal({ item, onClose, useFirebase, firebaseServices }) {
+  const { t } = useLang();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(()=>{
@@ -629,7 +635,7 @@ function ItemLogsModal({ item, onClose, useFirebase, firebaseServices }) {
   return (
     <InvModal title={`📋 Logs — ${item.name}`} onClose={onClose} wide>
       {loading ? <LoadingState small/> : logs.length===0
-        ? <div style={{textAlign:"center",color:C.muted,padding:30,fontSize:13}}>No logs yet</div>
+        ? <div style={{textAlign:"center",color:C.muted,padding:30,fontSize:13}}>{t("noLogsYet")}</div>
         : (
           <div style={{maxHeight:380,overflowY:"auto"}}>
             {logs.map((l,i)=>(
@@ -654,6 +660,7 @@ function ItemLogsModal({ item, onClose, useFirebase, firebaseServices }) {
 
 /* ── RECIPE MANAGER ──────────────────────────────────*/
 function RecipeManager({ menuItems, inventoryItems, onUpdate, useFirebase, firebaseServices }) {
+  const { t } = useLang();
   const [selMenu,   setSelMenu]   = useState(null);
   const [recipe,    setRecipe]    = useState([]);
   const [saving,    setSaving]    = useState(false);
@@ -727,7 +734,7 @@ function RecipeManager({ menuItems, inventoryItems, onUpdate, useFirebase, fireb
         {!selMenu
           ? <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:C.muted,flexDirection:"column",gap:8}}>
               <div style={{fontSize:36,opacity:0.3}}>🍳</div>
-              <div style={{fontSize:13}}>Select a menu item to edit its recipe</div>
+              <div style={{fontSize:13}}>{t("selectMenuItemRecipe")}</div>
             </div>
           : (
             <>
@@ -736,16 +743,16 @@ function RecipeManager({ menuItems, inventoryItems, onUpdate, useFirebase, fireb
                   <div style={{fontWeight:800,color:C.text,fontSize:15}}>{selMenu.em} {selMenu.name}</div>
                   <div style={{fontSize:11,color:C.muted}}>Recipe ingredients — deducted per order</div>
                 </div>
-                <button className="iv-btn" onClick={addIngredient} style={{...Btn(C.acc)}}>+ Ingredient</button>
+                <button className="iv-btn" onClick={addIngredient} style={{...Btn(C.acc)}}>{t("addIngredientBtn")}</button>
               </div>
 
               {recipe.length===0
-                ? <div style={{textAlign:"center",padding:30,color:C.muted,fontSize:12}}>No ingredients yet. Click "+ Ingredient" to add.</div>
+                ? <div style={{textAlign:"center",padding:30,color:C.muted,fontSize:12}}>{t("noIngredientsYet")}</div>
                 : (
                   <div style={{flex:1,overflowY:"auto", paddingBottom:80}}>
                     {/* Header */}
                     <div style={{display:"grid",gridTemplateColumns:"1fr 80px 80px 32px",gap:8,padding:"4px 0",borderBottom:`1px solid ${C.bdr}`,marginBottom:8}}>
-                      {["Ingredient","Qty","Unit",""].map(h=>(
+                      {[t("ingredientLabel"),t("qtyLabel"),t("unitLabel"),""].map(h=>(
                         <span key={h} style={{fontSize:9,color:C.muted,fontWeight:700,letterSpacing:"0.08em"}}>{h}</span>
                       ))}
                     </div>
@@ -766,7 +773,7 @@ function RecipeManager({ menuItems, inventoryItems, onUpdate, useFirebase, fireb
 
               <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${C.bdr}`,display:"flex",gap:8}}>
                 <button className="iv-btn" onClick={save} disabled={saving} style={{...Btn(C.acc),flex:1,opacity:saving?0.6:1}}>
-                  {saving?"Saving…":"💾 Save Recipe"}
+                  {saving?t("savingLabel"):t("saveRecipe")}
                 </button>
                 <button className="iv-btn" onClick={async()=>{
                   if (useFirebase) {
@@ -776,7 +783,7 @@ function RecipeManager({ menuItems, inventoryItems, onUpdate, useFirebase, fireb
                   }
                   setRecipe([]);
                   onUpdate();
-                }} style={{...Ghost(C.danger)}}>Clear</button>
+                }} style={{...Ghost(C.danger)}}>{t("clearRecipeBtn")}</button>
               </div>
             </>
           )
@@ -788,6 +795,7 @@ function RecipeManager({ menuItems, inventoryItems, onUpdate, useFirebase, fireb
 
 /* ── STOCK LOGS VIEW ─────────────────────────────────*/
 function StockLogsView({ logs }) {
+  const { t } = useLang();
   const [search, setSearch] = useState("");
   const [typeFil, setTypeFil] = useState("All");
   const TYPE_COL={add:C.success,deduct:C.info,adjust:C.warn,waste:C.danger};
@@ -803,18 +811,18 @@ function StockLogsView({ logs }) {
       <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search logs…" style={{...Inp,flex:1,maxWidth:280}}/>
         <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-          {["All","add","deduct","adjust","waste"].map(t=>(
-            <button key={t} className="iv-btn" onClick={()=>setTypeFil(t)}
-              style={{background:typeFil===t?(TYPE_COL[t]||C.acc)+"22":"transparent",border:`1px solid ${typeFil===t?(TYPE_COL[t]||C.acc)+"60":C.bdr}`,color:typeFil===t?(TYPE_COL[t]||C.acc):C.muted,borderRadius:20,padding:"4px 12px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>
-              {t==="All"?"All":t.charAt(0).toUpperCase()+t.slice(1)}
+          {[{id:"All",label:t("logTypeAll")},{id:"add",label:t("logTypeAdd")},{id:"deduct",label:t("logTypeDeduct")},{id:"adjust",label:t("logTypeAdjust")},{id:"waste",label:t("logTypeWaste")}].map(tf=>(
+            <button key={tf.id} className="iv-btn" onClick={()=>setTypeFil(tf.id)}
+              style={{background:typeFil===tf.id?(TYPE_COL[tf.id]||C.acc)+"22":"transparent",border:`1px solid ${typeFil===tf.id?(TYPE_COL[tf.id]||C.acc)+"60":C.bdr}`,color:typeFil===tf.id?(TYPE_COL[tf.id]||C.acc):C.muted,borderRadius:20,padding:"4px 12px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>
+              {tf.label}
             </button>
           ))}
         </div>
-        <span style={{fontSize:11,color:C.muted,marginLeft:"auto"}}>{visible.length} records</span>
+        <span style={{fontSize:11,color:C.muted,marginLeft:"auto"}}>{visible.length} {t("recordsLabel")}</span>
       </div>
       <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,overflow:"hidden"}}>
         {visible.length===0
-          ? <div style={{textAlign:"center",padding:40,color:C.muted,fontSize:13}}>No logs match</div>
+          ? <div style={{textAlign:"center",padding:40,color:C.muted,fontSize:13}}>{t("noLogsMatchInv")}</div>
           : visible.slice(0,150).map((l,i)=>(
             <div key={i} style={{display:"flex",gap:10,padding:"9px 14px",borderBottom:`1px solid ${C.bdr}`,fontSize:12,alignItems:"center"}}>
               <span style={{background:(TYPE_COL[l.type]||C.muted)+"20",color:TYPE_COL[l.type]||C.muted,borderRadius:6,padding:"2px 8px",fontWeight:700,fontSize:9,letterSpacing:"0.06em",flexShrink:0}}>{(l.type||"—").toUpperCase()}</span>
@@ -835,6 +843,7 @@ function StockLogsView({ logs }) {
 
 /* ── INVENTORY REPORTS ───────────────────────────────*/
 function InventoryReports({ items, logs, todayUse }) {
+  const { t } = useLang();
   const deductLogs = logs.filter(l=>l.type===LOG_TYPES.DEDUCT);
   const totalCost  = items.reduce((s,i)=>s+safeNum(i.currentStock)*safeNum(i.costPrice),0);
   const topUsed    = [...todayUse].slice(0,8);
@@ -850,12 +859,12 @@ function InventoryReports({ items, logs, todayUse }) {
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
       <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-        <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>📦 STOCK SUMMARY</div>
+        <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>{t("stockSummaryTitle")}</div>
         {[
-          {l:"Total Items",v:items.length,c:C.info},
-          {l:"Total Stock Value",v:CUR(totalCost),c:C.acc},
-          {l:"Low / Critical",v:items.filter(i=>["low","critical"].includes(stockStatus(i))).length,c:C.warn},
-          {l:"Out of Stock",v:items.filter(i=>stockStatus(i)==="out").length,c:C.danger},
+          {l:t("totalItems"),v:items.length,c:C.info},
+          {l:t("totalStockValue"),v:CUR(totalCost),c:C.acc},
+          {l:t("lowCritical"),v:items.filter(i=>["low","critical"].includes(stockStatus(i))).length,c:C.warn},
+          {l:t("outOfStock"),v:items.filter(i=>stockStatus(i)==="out").length,c:C.danger},
         ].map(m=>(
           <div key={m.l} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:`1px solid ${C.bdr}`,fontSize:13}}>
             <span style={{color:C.muted}}>{m.l}</span>
@@ -935,20 +944,22 @@ function InvModal({ title, onClose, children, wide }) {
 
 /* ── UTILS ───────────────────────────────────────────*/
 function EmptyInventory({ isAdmin, onAdd }) {
+  const { t } = useLang();
   return (
     <div style={{textAlign:"center",padding:"50px 20px",color:C.muted}}>
       <div style={{fontSize:54,marginBottom:12,opacity:0.2}}>📦</div>
-      <div style={{fontSize:15,fontWeight:700,color:"#3a4a60",marginBottom:6}}>No inventory items yet</div>
-      <div style={{fontSize:12,marginBottom:20}}>Add ingredients, supplies and packaging items</div>
-      {isAdmin&&<button className="iv-btn" onClick={onAdd} style={{...Btn(C.acc),padding:"10px 24px"}}>+ Add First Item</button>}
+      <div style={{fontSize:15,fontWeight:700,color:"#3a4a60",marginBottom:6}}>{t("noInventoryYet")}</div>
+      <div style={{fontSize:12,marginBottom:20}}>{t("noInventoryDesc")}</div>
+      {isAdmin&&<button className="iv-btn" onClick={onAdd} style={{...Btn(C.acc),padding:"10px 24px"}}>{t("addFirstItemBtn")}</button>}
     </div>
   );
 }
 function LoadingState({ small }) {
+  const { t } = useLang();
   return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:small?16:60,flexDirection:"column",gap:10}}>
       <div style={{width:28,height:28,border:`2px solid ${C.bdr}`,borderTopColor:C.acc,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-      {!small&&<div style={{fontSize:12,color:C.muted}}>Loading inventory…</div>}
+      {!small&&<div style={{fontSize:12,color:C.muted}}>{t("loading")}</div>}
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );

@@ -72,7 +72,7 @@ function getUrgency(sentAt, status) {
   return "low";
 }
 const URG_COL = { ok:"#3fb950", low:"#3fb950", medium:"#f0a500", high:"#f85149", critical:"#ff3b3b" };
-const URG_LABEL = { ok:"", low:"", medium:"⚠ Slow", high:"🔥 Late", critical:"🚨 OVERDUE" };
+const URG_KEY  = { ok:"", low:"", medium:"urgSlow", high:"urgLate", critical:"urgOverdue" };
 
 // ─── Helpers ──────────────────────────────────────────
 function toDate(value) {
@@ -491,7 +491,7 @@ export default function KitchenDisplay({ onBack }) {
           <div className="kv-blink" style={{background:"#f8514918",border:"1px solid #f8514960",
                 borderRadius:20,padding:"4px 13px",fontSize:11,fontWeight:800,color:"#f85149",
                 display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
-            🔴 {rushCount} Priority
+            🔴 {rushCount} {lang.t("priority")}
           </div>
         )}
 
@@ -501,7 +501,7 @@ export default function KitchenDisplay({ onBack }) {
                 borderRadius:20,padding:"4px 13px",fontSize:12,fontWeight:800,color:"#3fb950",
                 display:"flex",alignItems:"center",gap:6,flexShrink:0,
                 animation:"newBadge 0.5s ease"}}>
-            🆕 New Order!
+            {lang.t("newOrderAlert")}
           </div>
         )}
 
@@ -533,7 +533,7 @@ export default function KitchenDisplay({ onBack }) {
           <button className="kv-btn" onClick={logout}
             style={{background:"transparent",border:"1px solid #f8514930",borderRadius:8,
                     padding:"5px 12px",color:"#f85149",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>
-            Sign Out
+            {lang.t("signOut")}
           </button>
         </div>
       </header>
@@ -547,6 +547,7 @@ export default function KitchenDisplay({ onBack }) {
         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
           {STATUS_FILTERS.map(s=>{
             const cfg=S_CFG[s]; const col=s==="All"?"#f0a500":cfg.col; const on=statFil===s;
+            const statusLabelMap = {"All":lang.t("filterAllStatus"),"New":lang.t("statusNew"),"Preparing":lang.t("statusPreparing"),"Ready":lang.t("statusReady"),"Served":lang.t("statusServed"),"Cancelled":lang.t("statusCancelled")};
             return (
               <button key={s} className="kv-pill" onClick={()=>setStatFil(s)}
                 style={{background:on?col+"20":"transparent",
@@ -556,7 +557,7 @@ export default function KitchenDisplay({ onBack }) {
                         fontSize:10,fontWeight:700,fontFamily:"inherit",
                         display:"flex",alignItems:"center",gap:4}}>
                 {s!=="All"&&<span style={{fontSize:11}}>{cfg.icon}</span>}
-                <span>{s}</span>
+                <span>{statusLabelMap[s]||s}</span>
                 {s!=="All"&&counts[s]>0&&(
                   <span style={{background:col+"28",color:col,borderRadius:10,
                                 padding:"0 5px",fontSize:9,fontWeight:900}}>{counts[s]}</span>
@@ -595,6 +596,7 @@ export default function KitchenDisplay({ onBack }) {
         <div style={{display:"flex",gap:4}}>
           {PRIORITY_FILTERS.map(pf=>{
             const on=priFil===pf.key;
+            const priLabel = pf.key==="All"?lang.t("filterAllStatus"):pf.key==="Rush"?lang.t("rush"):lang.t("vip");
             return (
               <button key={pf.key} className="kv-pill" onClick={()=>setPriFil(pf.key)}
                 style={{background:on?pf.col+"20":"transparent",
@@ -602,7 +604,7 @@ export default function KitchenDisplay({ onBack }) {
                         borderRadius:20,padding:"4px 11px",
                         color:on?pf.col:"#4a5a70",
                         fontSize:10,fontWeight:700,fontFamily:"inherit"}}>
-                {pf.label}
+                {priLabel}
               </button>
             );
           })}
@@ -610,7 +612,7 @@ export default function KitchenDisplay({ onBack }) {
 
         <div style={{flex:1}}/>
         <span style={{fontSize:10,color:"#2a3a50",flexShrink:0}}>
-          ↻ 2s · {filtered.length} order{filtered.length!==1?"s":""}
+          ↻ 2s · {filtered.length} {lang.t("orders")}
         </span>
       </div>
 
@@ -645,7 +647,7 @@ export default function KitchenDisplay({ onBack }) {
             {/* Cancelled orders - always visible */}
             {cancelled.length>0 && (
               <div style={{marginBottom:24}}>
-                <SectionHead label="🚫 Cancelled Orders" count={cancelled.length} color="#f85149"/>
+                <SectionHead label={`🚫 ${lang.t("cancelled")}`} count={cancelled.length} color="#f85149"/>
                 <div className="kv-grid"
                   style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
                   {cancelled.map(o=>(
@@ -662,8 +664,8 @@ export default function KitchenDisplay({ onBack }) {
               <div style={{textAlign:"center",padding:"40px 20px",marginBottom:20,
                             background:"#0d1a10",border:"1px solid #1a3a20",borderRadius:16}}>
                 <div style={{fontSize:44,marginBottom:10}}>✅</div>
-                <div style={{fontSize:16,fontWeight:800,color:"#3fb950",marginBottom:4}}>All caught up!</div>
-                <div style={{fontSize:13,color:"#4a8060"}}>Kitchen is clear — no active orders</div>
+                <div style={{fontSize:16,fontWeight:800,color:"#3fb950",marginBottom:4}}>{lang.t("allCaughtUp")}</div>
+                <div style={{fontSize:13,color:"#4a8060"}}>{lang.t("kitchenClear")}</div>
               </div>
             )}
 
@@ -671,7 +673,7 @@ export default function KitchenDisplay({ onBack }) {
             {filtered.length===0&&orders.length>0 && (
               <div style={{textAlign:"center",padding:40,color:"#2a3a50"}}>
                 <div style={{fontSize:32,marginBottom:8}}>🔍</div>
-                <div style={{fontSize:13}}>No orders match these filters</div>
+                <div style={{fontSize:13}}>{lang.t("noOrdersMatchFilters")}</div>
               </div>
             )}
 
@@ -680,7 +682,7 @@ export default function KitchenDisplay({ onBack }) {
               <div>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:showCompleted?12:0}}>
                   <span style={{fontSize:11,fontWeight:800,color:"#64748b",letterSpacing:".08em"}}>
-                    ✓ SERVED ORDERS
+                    {lang.t("servedOrdersTitle")}
                   </span>
                   <span style={{background:"#64748b22",border:"1px solid #64748b40",color:"#94a3b8",
                                 borderRadius:10,padding:"1px 9px",fontSize:11,fontWeight:800}}>
@@ -691,13 +693,13 @@ export default function KitchenDisplay({ onBack }) {
                     <button className="kv-btn" onClick={()=>setShowClearModal(true)}
                       style={{background:"#f8514912",border:"1px solid #f8514940",borderRadius:8,
                               padding:"5px 12px",color:"#f85149",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>
-                      🗑 Clear All
+                      {lang.t("clearAll")}
                     </button>
                   )}
                   <button className="kv-btn" onClick={()=>setShowCompleted(s=>!s)}
                     style={{background:"#1e2d4a",border:"1px solid #2d3f5a",borderRadius:8,
                             padding:"5px 14px",color:"#94a3b8",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>
-                    {showCompleted?"▲ Hide":"▼ Show"} ({done.length})
+                    {showCompleted?lang.t("hideSection"):lang.t("showSection")} ({done.length})
                   </button>
                 </div>
 
@@ -713,7 +715,7 @@ export default function KitchenDisplay({ onBack }) {
                 )}
                 {showCompleted&&done.length===0&&allDone.length>0&&(
                   <div style={{textAlign:"center",padding:"18px 0",fontSize:12,color:"#2a3a50"}}>
-                    No served orders match the current filter
+                    {lang.t("noServedOrdersMatch")}
                   </div>
                 )}
               </div>
@@ -728,25 +730,25 @@ export default function KitchenDisplay({ onBack }) {
           <div style={{textAlign:"center"}}>
             <div style={{fontSize:38,marginBottom:12}}>🗑</div>
             <div style={{fontSize:17,fontWeight:800,color:"#e8edf5",marginBottom:8}}>
-              Clear Completed Orders?
+              {lang.t("clearCompletedTitle")}
             </div>
             <div style={{fontSize:13,color:"#7d8fa0",lineHeight:1.6,marginBottom:10}}>
-              Remove <span style={{color:"#f0a500",fontWeight:700}}>{allDone.length} order{allDone.length!==1?"s":""}</span> from the kitchen display.
+              {lang.t("delete")} <span style={{color:"#f0a500",fontWeight:700}}>{allDone.length} {lang.t("orders")}</span>
             </div>
             <div style={{background:"#0a1520",border:"1px solid #1e3a50",borderRadius:8,
                           padding:"9px 12px",marginBottom:20,fontSize:12,color:"#58a6ff",lineHeight:1.5}}>
-              ✅ Sales data and reports are <strong>not affected</strong>.
+              ✅ {lang.t("salesNotAffected")}
             </div>
             <div style={{display:"flex",gap:10}}>
               <button className="kv-btn" onClick={()=>setShowClearModal(false)}
                 style={{flex:1,background:"transparent",border:"1px solid #2d3f5a",borderRadius:10,
                         padding:"11px 0",color:"#7d8fa0",fontSize:13,fontWeight:700,fontFamily:"inherit"}}>
-                Cancel
+                {lang.t("cancel")}
               </button>
               <button className="kv-btn" onClick={clearCompleted}
                 style={{flex:1,background:"#f85149",border:"none",borderRadius:10,
                         padding:"11px 0",color:"#fff",fontSize:13,fontWeight:800,fontFamily:"inherit"}}>
-                Clear {allDone.length}
+                {lang.t("clearAll")} ({allDone.length})
               </button>
             </div>
           </div>
@@ -759,10 +761,10 @@ export default function KitchenDisplay({ onBack }) {
           <div style={{textAlign:"center"}}>
             <div style={{fontSize:38,marginBottom:12}}>🏷</div>
             <div style={{fontSize:17,fontWeight:800,color:"#e8edf5",marginBottom:8}}>
-              Change Priority
+              {lang.t("changePriorityTitle")}
             </div>
             <div style={{fontSize:13,color:"#7d8fa0",lineHeight:1.6,marginBottom:18}}>
-              Set priority for order <span style={{color:"#f0a500",fontWeight:700,fontFamily:"'JetBrains Mono',monospace"}}>{priModal.orderNo}</span>
+              {lang.t("setPriorityFor")} <span style={{color:"#f0a500",fontWeight:700,fontFamily:"'JetBrains Mono',monospace"}}>{priModal.orderNo}</span>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
               {["Normal","Rush","VIP"].map(p=>{
@@ -788,7 +790,7 @@ export default function KitchenDisplay({ onBack }) {
               style={{width:"100%",background:"transparent",border:"1px solid #2d3f5a",
                       borderRadius:10,padding:"11px 0",color:"#7d8fa0",
                       fontSize:13,fontWeight:700,fontFamily:"inherit"}}>
-              Cancel
+              {lang.t("cancel")}
             </button>
           </div>
         </Modal>
@@ -808,7 +810,8 @@ function OrderCard({ order, tick, flash, canAct, onAdvance, onCancel, onDismiss,
   const pcfg     = PRIORITY_CFG[priority];
   const urg      = getUrgency(order.sentAt, order.status);
   const urgCol   = URG_COL[urg];
-  const urgLabel = URG_LABEL[urg];
+  const urgLabelKey = URG_KEY[urg];
+  const urgLabel = urgLabelKey ? lang.t(urgLabelKey) : "";
   const isCrit   = urg === "critical";
   const isReady  = order.status === "Ready";
   const isDone   = order.status === "Served" || order.status === "Cancelled";
@@ -983,7 +986,7 @@ function OrderCard({ order, tick, flash, canAct, onAdvance, onCancel, onDismiss,
       {!isDone && !canAct && (
         <div style={{background:"#151e30",borderRadius:10,padding:"11px 0",
                       fontSize:12,color:"#374a60",textAlign:"center"}}>
-          🔒 View Only
+          {lang.t("viewOnly")}
         </div>
       )}
 
@@ -993,7 +996,7 @@ function OrderCard({ order, tick, flash, canAct, onAdvance, onCancel, onDismiss,
           style={{width:"100%",background:"transparent",border:"1px solid #2d3f5a",
                   borderRadius:10,padding:"9px 0",color:"#64748b",
                   fontSize:12,fontWeight:700,fontFamily:"inherit"}}>
-          ✕ Dismiss
+          {lang.t("dismiss")}
         </button>
       )}
     </div>
@@ -1044,15 +1047,16 @@ function Modal({onClose,children}) {
   );
 }
 function EmptyState() {
+  const lang = useLang();
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",
                   justifyContent:"center",minHeight:"60vh"}}>
       <div style={{fontSize:60,marginBottom:14,opacity:.12}}>🍽</div>
       <div style={{fontSize:17,fontWeight:700,color:"#3a4a60",marginBottom:8}}>
-        Kitchen queue is empty
+        {lang.t("kitchenQueueEmpty")}
       </div>
       <div style={{fontSize:13,color:"#2a3a50"}}>
-        Orders appear instantly when sent from POS
+        {lang.t("ordersFromPOS")}
       </div>
     </div>
   );

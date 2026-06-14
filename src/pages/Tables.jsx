@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useFirebaseServices } from "../firebase/FirebaseServicesProvider.jsx";
 import { TableService, TABLE_STATUSES, TABLE_STATUS_CFG } from "../db/services/tables.js";
+import { useLang } from "../i18n/LanguageContext.jsx";
 
 function safeArr(v) { return Array.isArray(v) ? v : []; }
 
@@ -35,7 +36,8 @@ function FLabel({ children }) {
 export default function Tables({ onBack }) {
   const firebaseServices = useFirebaseServices();
   const useFirebase = !!firebaseServices;
-  
+  const { t } = useLang();
+
   const [tables, setTables] = useState([]);
   const [form, setForm] = useState(null); // null = closed, {} = new, {...} = edit
   const [saving, setSaving] = useState(false);
@@ -70,23 +72,23 @@ export default function Tables({ onBack }) {
 
   async function saveTable() {
     if (!form.number?.trim()) {
-      showToast("Table number is required", "err");
+      showToast(t("tableNumRequired"), "err");
       return;
     }
     if (form.capacity !== undefined && form.capacity !== "") {
       const cap = +form.capacity;
       if (!isFinite(cap) || cap < 1 || cap > 50 || !Number.isInteger(cap)) {
-        showToast("Capacity must be a whole number between 1 and 50", "err");
+        showToast(t("capacityInvalid"), "err");
         return;
       }
     }
 
     // Check for duplicate table number
-    const duplicate = tables.find(t =>
-      t.number?.toString().trim() === form.number?.toString().trim() && t.id !== form.id
+    const duplicate = tables.find(tbl =>
+      tbl.number?.toString().trim() === form.number?.toString().trim() && tbl.id !== form.id
     );
     if (duplicate) {
-      showToast("Table number already exists", "err");
+      showToast(t("tableNumExists"), "err");
       return;
     }
 
@@ -100,12 +102,12 @@ export default function Tables({ onBack }) {
         TableService.save(form);
         console.log('Table saved to localStorage');
       }
-      showToast(form.id ? "Table updated" : "Table added");
+      showToast(form.id ? t("tableUpdated") : t("tableAdded"));
       setForm(null);
       load();
     } catch (e) {
       console.error('Error saving table:', e);
-      showToast("Save failed", "err");
+      showToast(t("saveFailed"), "err");
     }
     setSaving(false);
   }
@@ -121,10 +123,10 @@ export default function Tables({ onBack }) {
       }
       setDelId(null);
       load();
-      showToast("Table deleted", "warn");
+      showToast(t("tableDeleted"), "warn");
     } catch (e) {
       console.error('Error deleting table:', e);
-      showToast("Delete failed", "err");
+      showToast(t("deleteFailed"), "err");
     }
   }
 
@@ -140,7 +142,7 @@ export default function Tables({ onBack }) {
       load();
     } catch (e) {
       console.error('Error updating table status:', e);
-      showToast("Status update failed", "err");
+      showToast(t("statusUpdateFailed"), "err");
     }
   }
 
@@ -151,12 +153,12 @@ export default function Tables({ onBack }) {
       {/* Header */}
       <header style={{ background: C.surf, borderBottom: `2px solid ${C.acc}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
         <button onClick={onBack} style={{ background: "transparent", border: `1px solid ${C.bdr}`, color: C.muted, borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>
-          ← Back
+          {t("back")}
         </button>
         <span style={{ fontWeight: 900, fontSize: 20, color: C.acc, letterSpacing: ".07em" }}>
           KAVO<span style={{ color: C.text, opacity: .3 }}>-SYS</span>
         </span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>🪑 Tables Management</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{t("tablesManagement")}</span>
       </header>
 
       {/* Main content */}
@@ -164,14 +166,14 @@ export default function Tables({ onBack }) {
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <div>
-              <div style={{ fontWeight: 800, color: C.text, fontSize: 22 }}>🪑 Restaurant Tables</div>
+              <div style={{ fontWeight: 800, color: C.text, fontSize: 22 }}>{t("restaurantTables")}</div>
               <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>
-                Manage floor tables — used in POS for dine-in orders
+                {t("manageTablesDesc")}
               </div>
             </div>
             <button onClick={() => setForm({ number: "", label: "", capacity: 4, status: "Available", active: true, notes: "" })}
               style={{ background: C.acc, color: "#000", border: "none", borderRadius: 10, padding: "11px 20px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-              + Add Table
+              {t("addTable")}
             </button>
           </div>
 
@@ -179,8 +181,8 @@ export default function Tables({ onBack }) {
           {tables.length === 0 ? (
             <div style={{ textAlign: "center", padding: "80px 20px", color: C.muted, background: C.card, borderRadius: 16, border: `1px solid ${C.bdr}` }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>🪑</div>
-              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No tables yet</div>
-              <div style={{ fontSize: 13 }}>Click + Add Table to create your floor plan.</div>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{t("noTablesYet")}</div>
+              <div style={{ fontSize: 13 }}>{t("addTableHint")}</div>
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 14, marginBottom: 20 }}>
@@ -197,7 +199,7 @@ export default function Tables({ onBack }) {
                           <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{table.label}</div>
                         )}
                         {table.capacity > 0 && (
-                          <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>👥 {table.capacity} seats</div>
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>👥 {table.capacity} {t("seats")}</div>
                         )}
                       </div>
                       <button onClick={(e) => { e.stopPropagation(); cycleStatus(table); }}
@@ -208,7 +210,7 @@ export default function Tables({ onBack }) {
                     <div style={{ display: "flex", gap: 8 }}>
                       <button onClick={(e) => { e.stopPropagation(); setForm({ ...table }); }}
                         style={{ flex: 1, background: "transparent", border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "7px 0", color: C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                        ✏ Edit
+                        {t("edit")}
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); setDelId(table.id); }}
                         style={{ background: "transparent", border: `1px solid ${C.danger}40`, borderRadius: 8, padding: "7px 11px", color: C.danger, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
@@ -228,30 +230,30 @@ export default function Tables({ onBack }) {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20 }}>
           <div style={{ background: C.surf, border: `2px solid ${C.bdr}`, borderRadius: 16, padding: 28, width: 420, maxWidth: "96vw" }}>
             <div style={{ fontWeight: 800, color: C.text, fontSize: 18, marginBottom: 20 }}>
-              {form.id ? "✏ Edit Table" : "🆕 New Table"}
+              {form.id ? t("editTableModal") : t("newTableModal")}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
               <div>
-                <FLabel>TABLE NUMBER *</FLabel>
+                <FLabel>{t("tableNumberField")}</FLabel>
                 <input value={form.number || ""} onChange={e => setF("number", e.target.value)}
                   placeholder="1" autoFocus
                   style={{ width: "100%", background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "8px 12px", color: C.text, fontSize: 14, fontFamily: "'JetBrains Mono',monospace", outline: "none", boxSizing: "border-box" }} />
               </div>
               <div>
-                <FLabel>CAPACITY</FLabel>
+                <FLabel>{t("tableCapacityField")}</FLabel>
                 <input type="number" min="1" max="50" value={form.capacity || ""} onChange={e => setF("capacity", +e.target.value)}
                   placeholder="4"
                   style={{ width: "100%", background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "8px 12px", color: C.text, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
               </div>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <FLabel>LABEL (optional)</FLabel>
+              <FLabel>{t("tableLabelOptional")}</FLabel>
               <input value={form.label || ""} onChange={e => setF("label", e.target.value)}
                 placeholder="e.g. Window Seat, VIP Booth"
                 style={{ width: "100%", background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "8px 12px", color: C.text, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
             </div>
             <div style={{ marginBottom: 14 }}>
-              <FLabel>STATUS</FLabel>
+              <FLabel>{t("status")}</FLabel>
               <select value={form.status || "Available"} onChange={e => setF("status", e.target.value)}
                 style={{ width: "100%", background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "8px 12px", color: C.text, fontSize: 14, fontFamily: "inherit" }}>
                 {Object.values(TABLE_STATUSES).map(s => <option key={s} value={s}>{s}</option>)}
@@ -260,16 +262,16 @@ export default function Tables({ onBack }) {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
               <input type="checkbox" id="tbl-active" checked={form.active !== false}
                 onChange={e => setF("active", e.target.checked)} />
-              <label htmlFor="tbl-active" style={{ fontSize: 13, color: C.muted, cursor: "pointer" }}>Active (shown in POS)</label>
+              <label htmlFor="tbl-active" style={{ fontSize: 13, color: C.muted, cursor: "pointer" }}>{t("tableActiveShown")}</label>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={saveTable} disabled={saving}
                 style={{ flex: 2, background: C.acc, color: "#000", border: "none", borderRadius: 10, padding: "11px 0", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
-                {saving ? "Saving…" : "💾 Save"}
+                {saving ? t("savingLabel") : t("save")}
               </button>
               <button onClick={() => setForm(null)}
                 style={{ flex: 1, background: "transparent", border: `1px solid ${C.bdr}`, borderRadius: 10, padding: "11px 0", color: C.muted, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
-                Cancel
+                {t("cancel")}
               </button>
             </div>
           </div>
@@ -281,13 +283,13 @@ export default function Tables({ onBack }) {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
           <div style={{ background: C.surf, border: `2px solid ${C.bdr}`, borderRadius: 14, padding: 26, maxWidth: 360, width: "96vw", textAlign: "center" }}>
             <div style={{ fontSize: 42, marginBottom: 12 }}>🗑</div>
-            <div style={{ fontWeight: 800, color: C.text, fontSize: 16, marginBottom: 8 }}>Delete this table?</div>
-            <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>This cannot be undone.</div>
+            <div style={{ fontWeight: 800, color: C.text, fontSize: 16, marginBottom: 8 }}>{t("deleteTableConfirm")}</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>{t("cannotUndo")}</div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => deleteTable(delId)}
-                style={{ flex: 1, background: C.danger, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Delete</button>
+                style={{ flex: 1, background: C.danger, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("delete")}</button>
               <button onClick={() => setDelId(null)}
-                style={{ flex: 1, background: "transparent", border: `1px solid ${C.bdr}`, borderRadius: 10, padding: "11px 0", color: C.muted, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                style={{ flex: 1, background: "transparent", border: `1px solid ${C.bdr}`, borderRadius: 10, padding: "11px 0", color: C.muted, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("cancel")}</button>
             </div>
           </div>
         </div>

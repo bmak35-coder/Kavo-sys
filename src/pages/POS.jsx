@@ -307,14 +307,14 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
   function validateOrder() {
     if (!cart.length) { showToast(tr("cartEmpty","Cart is empty"), "err"); return false; }
     if (type === "dine-in") {
-      if (!tableNo) { showToast("Please select a table", "err"); setShowTablePicker(true); return false; }
+      if (!tableNo) { showToast(tr("pleaseSelectTable","Please select a table"), "err"); setShowTablePicker(true); return false; }
     }
     if (type === "takeaway" || type === "delivery") {
-      if (!custName.trim()) { showToast("Please enter customer name", "err"); return false; }
-      if (!custPhone.trim()) { showToast("Please enter phone number", "err"); return false; }
+      if (!custName.trim()) { showToast(tr("pleaseEnterCustName","Please enter customer name"), "err"); return false; }
+      if (!custPhone.trim()) { showToast(tr("pleaseEnterPhone","Please enter phone number"), "err"); return false; }
     }
     if (type === "delivery") {
-      if (!deliveryAddr.trim()) { showToast("Please enter delivery address", "err"); return false; }
+      if (!deliveryAddr.trim()) { showToast(tr("pleaseEnterAddr","Please enter delivery address"), "err"); return false; }
     }
     return true;
   }
@@ -344,7 +344,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
     if (type === "dine-in" && tableId && firebaseServices && firebaseServices.tables) {
       firebaseServices.tables.updateStatus(tableId, 'occupied').catch(function(err) { console.error('Error updating table:', err); });
     }
-    showToast("Order " + orderNo + " held");
+    showToast(tr("orderHeldMsg","Order held") + " " + orderNo);
     resetOrder();
   }
   function resumeOrder(h) {
@@ -357,7 +357,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
     if (firebaseServices && firebaseServices.heldOrders && h.id) {
       firebaseServices.heldOrders.delete(h.id).catch(function(err) { console.error('Error deleting held order:', err); });
     }
-    setModal(null); showToast("Resumed " + h.orderNo);
+    setModal(null); showToast(tr("orderResumedMsg","Resumed") + " " + h.orderNo);
   }
   function removeHeld(no) {
     var upd = held.filter(function(h) { return h.orderNo !== no; });
@@ -381,7 +381,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
     if (firebaseServices && firebaseServices.kitchen) {
       firebaseServices.kitchen.getByOrderNo(orderNo).then(function(existingOrder) {
         if (existingOrder) {
-          showToast("Order already sent to kitchen", "err");
+          showToast(tr("orderAlreadySentKitchen","Order already sent to kitchen"), "err");
           return;
         }
         // Order doesn't exist, send it to kitchen
@@ -418,10 +418,10 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
           firebaseServices.heldOrders.create(openOrder).catch(function(err) { console.error('Error saving held order:', err); });
         }
         
-        setStatus("Preparing"); setModal("kitchen"); showToast("Sent to kitchen", "ok");
+        setStatus("Preparing"); setModal("kitchen"); showToast(tr("sentToKitchenToast","Sent to kitchen"), "ok");
       }).catch(function(err) { 
         console.error('Error sending to kitchen:', err);
-        showToast("Failed to send to kitchen", "err");
+        showToast(tr("failedSendKitchen","Failed to send to kitchen"), "err");
       });
     } else {
       // Local mode (no Firebase) - just update localStorage
@@ -442,7 +442,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
         : held.concat([openOrder]);
       setHeld(updHeld); lsSet("kavo_held", updHeld);
       
-      setStatus("Preparing"); setModal("kitchen"); showToast("Sent to kitchen", "ok");
+      setStatus("Preparing"); setModal("kitchen"); showToast(tr("sentToKitchenToast","Sent to kitchen"), "ok");
     }
   }
 
@@ -504,14 +504,14 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
       //              order: o, printedDate: new Date().toLocaleDateString("en-GB") };
       // ReceiptService.save(rcp).catch(function() {});
     } else {
-      showToast("Order saved", "ok");
+      showToast(tr("orderSavedMsg","Order saved"), "ok");
     }
     return o; // caller uses this for receipt preview
   }
 
   function voidOrder() {
     if (!can("canVoidOrders")) {
-      showToast("Manager approval required to void orders", "err");
+      showToast(tr("managerApprovalVoid","Manager approval required to void orders"), "err");
       return;
     }
     if (window.confirm(tr("voidOrder","🚫 Void").replace("🚫 ","") + " " + orderNo + "?")) {
@@ -526,7 +526,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
         }
       }
       resetOrder();
-      showToast("Order voided", "warn");
+      showToast(tr("orderVoidedMsg","Order voided"), "warn");
     }
   }
 
@@ -542,7 +542,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
     var blob = new Blob([hdr + rows], {type:"text/csv"});
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = "KAVO_orders.csv"; a.click();
-    showToast("CSV exported");
+    showToast(tr("csvExportedMsg","CSV exported"));
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -578,7 +578,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
           <span style={{ fontSize:10, color:T.muted }}>{ticker.date} · {ticker.time}</span>
           <div style={{ flex:1 }}/>
           {/* Nav buttons */}
-          <button className="pos-btn" onClick={function() { onNavigate("home"); }} style={ghostStyle(true)}>🏠 Home</button>
+          <button className="pos-btn" onClick={function() { onNavigate("home"); }} style={ghostStyle(true)}>{"🏠 " + tr("home","Home")}</button>
           {can("canAccessReports") &&
             <button className="pos-btn" onClick={function() { onNavigate("reports"); }} style={Object.assign({}, ghostStyle(true), currentScreen === "reports" ? {background: T.accDim, borderColor: T.acc, color: T.acc, cursor: "default"} : {})} disabled={currentScreen === "reports"}>{tr("reports","Reports")}</button>}
           {(can("canAccessSettings") || can("canManageMenu")) &&
@@ -613,13 +613,13 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                          borderRadius:20, padding:"4px 12px", cursor:"pointer",
                          fontSize:11, fontWeight:700, fontFamily:"inherit",
                          display:"flex", alignItems:"center", gap:4, whiteSpace:"nowrap" }}>
-                <span>{c.icon}</span><span>{c.name}</span>
+                <span>{c.icon}</span><span>{c.id === "all" ? tr("all","All") : c.name}</span>
               </button>
             );
           })}
           <div style={{ flex:1 }}/>
           <input value={menuSearch} onChange={function(e) { setMenuSearch(e.target.value); }}
-            placeholder="Search…" style={Object.assign({}, inputStyle("140px"), {padding:"4px 8px", fontSize:11})}/>
+            placeholder={tr("search","Search") + "…"} style={Object.assign({}, inputStyle("140px"), {padding:"4px 8px", fontSize:11})}/>
         </div>
 
         {/* Menu grid */}
@@ -654,7 +654,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
           })}
           {filteredMenu.length === 0 && (
             <div style={{ gridColumn:"1/-1", textAlign:"center", color:T.muted, padding:"30px 0" }}>
-              No items found
+              {tr("noItemsFound","No items found")}
             </div>
           )}
         </div>
@@ -696,12 +696,12 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                   color: tableNo ? T.acc : T.muted,
                 })}>
                 <span>🪑</span>
-                <span>{tableNo ? ("Table " + tableNo) : tr("tableNo","Table #")}</span>
-                {!tableNo && <span style={{ marginLeft:"auto", fontSize:9, color:"#f85149" }}>required</span>}
+                <span>{tableNo ? (tr("tableLabel","Table") + " " + tableNo) : tr("tableNo","Table #")}</span>
+                {!tableNo && <span style={{ marginLeft:"auto", fontSize:9, color:"#f85149" }}>{tr("required","required")}</span>}
               </button>
             ) : null}
             <input value={custName} onChange={function(e) { setCustName(e.target.value); }}
-              placeholder={type === "dine-in" ? tr("customerName","Customer name (optional)") : tr("customerName","Customer name") + " *"}
+              placeholder={type === "dine-in" ? tr("customerNameOptional","Customer name (optional)") : tr("customerName","Customer name") + " *"}
               style={Object.assign({}, inputStyle(), {
                 flex:2, padding:"5px 8px", fontSize:11,
                 border: (type !== "dine-in" && !custName)
@@ -712,14 +712,14 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
           {(type === "takeaway" || type === "delivery") && (
             <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
               <input value={custPhone} onChange={function(e) { setCustPhone(e.target.value); }}
-                placeholder="📞 Phone number *"
+                placeholder={"📞 " + tr("phoneNumber","Phone number") + " *"}
                 style={Object.assign({}, inputStyle(), {
                   padding:"5px 8px", fontSize:11,
                   border: !custPhone ? "1px solid #f8514940" : "1px solid " + T.border
                 })}/>
               {type === "delivery" && (
                 <textarea value={deliveryAddr} onChange={function(e) { setDeliveryAddr(e.target.value); }}
-                  placeholder={"📍 Delivery address *\nBuilding, floor, street, landmark…"}
+                  placeholder={"📍 " + tr("deliveryAddress","Delivery address") + " *\n" + tr("deliveryAddressHint","Building, floor, street, landmark…")}
                   rows={3}
                   style={Object.assign({}, inputStyle(), {
                     padding:"6px 8px", fontSize:11, resize:"vertical", minHeight:70,
@@ -728,7 +728,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                   })}/>
               )}
               <textarea value={orderNotes} onChange={function(e) { setOrderNotes(e.target.value); }}
-                placeholder={type === "delivery" ? "🗒 Delivery notes (optional)…" : "🗒 Takeaway notes (optional)…"}
+                placeholder={"🗒 " + (type === "delivery" ? tr("deliveryNotesPlaceholder","Delivery notes (optional)…") : tr("takeawayNotesPlaceholder","Takeaway notes (optional)…"))}
                 rows={2}
                 style={Object.assign({}, inputStyle(), {
                   padding:"5px 8px", fontSize:11, resize:"vertical", minHeight:44,
@@ -746,7 +746,10 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
           </span>
           <span style={{ fontSize:10, fontWeight:700,
                          color: status === "Paid" ? T.success : status === "Preparing" ? T.warn : T.info }}>
-            {status}
+            {status === "New" ? tr("statusNew","NEW")
+              : status === "Preparing" ? tr("statusPreparing","PREPARING")
+              : status === "Paid" ? tr("statusPaid","PAID")
+              : status}
           </span>
         </div>
 
@@ -755,7 +758,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
           {cart.length === 0 ? (
             <div style={{ textAlign:"center", color:T.muted, padding:"30px 10px" }}>
               <div style={{ fontSize:32, marginBottom:6 }}>🛒</div>
-              <div style={{ fontSize:12 }}>Cart is empty</div>
+              <div style={{ fontSize:12 }}>{tr("cartEmpty","Cart is empty")}</div>
             </div>
           ) : cart.map(function(item, idx) {
             return (
@@ -776,7 +779,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                                 overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                     {item.name}
                   </div>
-                  <div style={{ fontSize:10, color:T.muted }}>{cur(item.price, sym)} each</div>
+                  <div style={{ fontSize:10, color:T.muted }}>{cur(item.price, sym)} {tr("each","each")}</div>
                   {item.note && (
                     <div style={{ fontSize:9, color:T.warn, fontStyle:"italic",
                                   overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
@@ -815,9 +818,9 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
         <div style={{ borderTop:"1px solid " + T.border, padding:"8px 12px", flexShrink:0 }}>
           {[
             [tr("subtotal","Subtotal"), cur(subtotal, sym), T.sub],
-            discPct > 0 ? ["Discount (" + discPct + "%)", "−" + cur(discAmt, sym)] : null,
-            svcEnabled ? ["Service (" + settings.serviceRate + "%)", "+" + cur(svcAmt, sym)] : null,
-            taxEnabled ? ["VAT (" + settings.taxRate + "%)", "+" + cur(vatAmt, sym)] : null,
+            discPct > 0 ? [tr("discount","Discount") + " (" + discPct + "%)", "−" + cur(discAmt, sym)] : null,
+            svcEnabled ? [tr("service","Service") + " (" + settings.serviceRate + "%)", "+" + cur(svcAmt, sym)] : null,
+            taxEnabled ? [tr("vat","VAT") + " (" + settings.taxRate + "%)", "+" + cur(vatAmt, sym)] : null,
           ].filter(Boolean).map(function(row) {
             return (
               <div key={row[0]} style={{ display:"flex", justifyContent:"space-between",
@@ -829,7 +832,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
           })}
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
                         borderTop:"1px solid " + T.border, marginTop:4, paddingTop:6 }}>
-            <span style={{ fontWeight:900, fontSize:14, color:T.text }}>TOTAL</span>
+            <span style={{ fontWeight:900, fontSize:14, color:T.text }}>{tr("total","TOTAL")}</span>
             <span style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:900,
                            fontSize:18, color:T.acc }}>
               {cur(grand, sym)}
@@ -839,10 +842,10 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
           {/* Discount input */}
           {can("canApplyDiscount") && (
             <div style={{ display:"flex", gap:6, marginTop:6 }}>
-              <span style={{ fontSize:11, color:T.muted, alignSelf:"center" }}>Disc%:</span>
+              <span style={{ fontSize:11, color:T.muted, alignSelf:"center" }}>{tr("discPct","Disc%:")}</span>
               <input type="number" min="0" max="100" value={discPct}
                 onChange={function(e) {
-                  if (!can("canApplyDiscount")) { showToast("Manager approval required", "err"); return; }
+                  if (!can("canApplyDiscount")) { showToast(tr("managerApprovalDiscount","Manager approval required"), "err"); return; }
                   setDiscPct(safeNum(e.target.value));
                 }}
                 style={Object.assign({}, inputStyle("60px"), {textAlign:"center", padding:"4px 6px", fontSize:11})}/>
@@ -859,7 +862,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
           {held.length > 0 && (
             <button className="pos-btn" onClick={function() { setModal("held"); }}
               style={Object.assign({}, btnStyle("#334155","#fff"), {gridColumn:"span 2"})}>
-              📂 Held Orders ({held.length})
+              {tr("heldOrders","📂 Held Orders")} ({held.length})
             </button>
           )}
           <button className="pos-btn" onClick={function() { saveOrder(false); }}
@@ -875,7 +878,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
             disabled={!cart.length}
             style={Object.assign({}, btnStyle(T.acc,"#000"), {gridColumn:"span 2", padding:"12px 0",
                    fontSize:14, fontWeight:900, opacity: cart.length ? 1 : 0.4})}>
-            💳 Pay {cur(grand, sym)}
+            {tr("pay","💳 Pay")} {cur(grand, sym)}
           </button>
           <button className="pos-btn" onClick={exportCSV}
             style={Object.assign({}, ghostStyle(true), {gridColumn:"span 2"})}>{tr("exportCSV","📥 Export CSV")}</button>
@@ -925,7 +928,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                 {paidNum >= grand && (
                   <div style={{ display:"flex", justifyContent:"space-between", marginTop:8,
                                 fontSize:14, fontWeight:700, color:T.success }}>
-                    <span>Change</span>
+                    <span>{tr("change","Change")}</span>
                     <span style={{ fontFamily:"'JetBrains Mono',monospace" }}>{cur(change, sym)}</span>
                   </div>
                 )}
@@ -934,7 +937,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
             {payMethod === "Split" && (
               <div style={{ marginBottom:12 }}>
                 <div style={{ fontSize:11, color:T.muted, fontWeight:700, marginBottom:8 }}>
-                  Split Payment — enter amounts per method
+                  {tr("splitPaymentHint","Split Payment — enter amounts per method")}
                 </div>
                 {[
                   {method:"Cash",  icon:"💵"},
@@ -973,7 +976,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                     <div style={{ background:T.card, borderRadius:8, padding:"9px 12px", marginTop:4,
                                   border:"1px solid " + (isExact ? T.success+"50" : "#f85149"+"50") }}>
                       <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, marginBottom:3 }}>
-                        <span style={{ color:T.muted }}>Split total</span>
+                        <span style={{ color:T.muted }}>{tr("splitTotalLabel","Split total")}</span>
                         <span style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:700,
                                        color: isExact ? T.success : T.text }}>
                           {cur(splitTotal, sym)}
@@ -981,7 +984,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                       </div>
                       <div style={{ display:"flex", justifyContent:"space-between", fontSize:11 }}>
                         <span style={{ color:T.muted }}>
-                          {isExact ? "✅ Balanced" : remaining > 0 ? "Remaining" : "⚠ Over by"}
+                          {isExact ? tr("balancedLabel","✅ Balanced") : remaining > 0 ? tr("remainingLabel","Remaining") : tr("overByLabel","⚠ Over by")}
                         </span>
                         <span style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:800,
                                        color: isExact ? T.success : "#f85149" }}>
@@ -1001,11 +1004,11 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                   if (payMethod === "Split") {
                     var splitTotal = roundMoney(Object.values(splitAmounts).reduce(function(s,v){return s+(+v||0);},0));
                     if (Math.abs(splitTotal - grand) > 0.005) {
-                      showToast("Payment amounts must equal invoice total (" + cur(grand, sym) + ")", "err");
+                      showToast(tr("paymentMustEqual","Payment amounts must equal invoice total") + " (" + cur(grand, sym) + ")", "err");
                       return;
                     }
                     if (splitTotal <= 0) {
-                      showToast("Please enter at least one payment amount", "err");
+                      showToast(tr("enterAtLeastOnePayment","Please enter at least one payment amount"), "err");
                       return;
                     }
                   }
@@ -1024,7 +1027,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                       else { resetOrder(); }
                     } catch(err) {
                       resetOrder(); setModal(null);
-                      showToast("Order saved (receipt preview unavailable)", "ok");
+                      showToast(tr("orderSavedNoReceipt","Order saved (receipt preview unavailable)"), "ok");
                     }
                   }).catch(function() {
                     // If availability check fails, proceed with payment normally
@@ -1039,10 +1042,10 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                   });
                 }}
                 style={Object.assign({}, btnStyle(T.acc,"#000"), {flex:2, padding:"11px 0", fontWeight:800})}>
-                ✅ Confirm Payment
+                {tr("confirmPayment","✅ Confirm Payment")}
               </button>
               <button className="pos-btn" onClick={function() { setModal(null); }}
-                style={Object.assign({}, ghostStyle(), {flex:1})}>Cancel</button>
+                style={Object.assign({}, ghostStyle(), {flex:1})}>{tr("cancel","Cancel")}</button>
             </div>
           </div>
         </div>
@@ -1054,14 +1057,14 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                       alignItems:"center", justifyContent:"center", zIndex:1000 }}>
           <div style={{ background:T.surf, border:"1px solid " + T.border, borderRadius:14,
                         padding:22, width:420, maxHeight:"82vh", overflowY:"auto" }}>
-            <div style={{ fontWeight:800, color:T.text, fontSize:16, marginBottom:14 }}>📂 Held Orders</div>
+            <div style={{ fontWeight:800, color:T.text, fontSize:16, marginBottom:14 }}>{tr("heldOrders","📂 Held Orders")}</div>
             {held.length === 0 ? (
-              <div style={{ textAlign:"center", color:T.muted, padding:"20px 0" }}>No held orders</div>
+              <div style={{ textAlign:"center", color:T.muted, padding:"20px 0" }}>{tr("noHeldOrders","No held orders")}</div>
             ) : held.map(function(h) {
-              var typeCfg = h.type === "dine-in"  ? {icon:"🍽",  label:"Dine-In",  col:"#58a6ff"}
-                          : h.type === "takeaway" ? {icon:"🥡",  label:"Takeaway", col:"#f0a500"}
-                          : h.type === "delivery" ? {icon:"🚚",  label:"Delivery", col:"#3fb950"}
-                          :                         {icon:"🧾",  label:"Order",    col:T.muted};
+              var typeCfg = h.type === "dine-in"  ? {icon:"🍽",  label:tr("dineIn","Dine-In"),    col:"#58a6ff"}
+                          : h.type === "takeaway" ? {icon:"🥡",  label:tr("takeaway","Takeaway"), col:"#f0a500"}
+                          : h.type === "delivery" ? {icon:"🚚",  label:tr("delivery","Delivery"), col:"#3fb950"}
+                          :                         {icon:"🧾",  label:tr("receiptOrder","Order"), col:T.muted};
               var itemCount = safeArr(h.cart).length;
               var total     = roundMoney(safeArr(h.cart).reduce(function(s,i){return s+safeNum(i.price)*safeNum(i.qty);},0));
               var heldTime  = h.heldAt ? new Date(h.heldAt).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "";
@@ -1087,7 +1090,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
                     <div style={{ flex:1 }}>
                       {h.type === "dine-in" ? (
-                        <div style={{ fontWeight:800, color:T.text, fontSize:13 }}>🪑 Table {h.tableNo || "—"}</div>
+                        <div style={{ fontWeight:800, color:T.text, fontSize:13 }}>🪑 {tr("tableLabel","Table")} {h.tableNo || "—"}</div>
                       ) : (
                         <div>
                           {h.custName && <div style={{ fontWeight:700, color:T.text, fontSize:12 }}>👤 {h.custName}</div>}
@@ -1095,7 +1098,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                         </div>
                       )}
                       <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>
-                        {itemCount} item{itemCount !== 1 ? "s" : ""}
+                        {itemCount} {itemCount !== 1 ? tr("itemsLabel","items") : tr("itemLabel","item")}
                         {total > 0 && (
                           <span style={{ color:T.acc, fontWeight:700, marginLeft:8 }}>{cur(total, sym)}</span>
                         )}
@@ -1104,7 +1107,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                     <div style={{ display:"flex", gap:5, marginLeft:10 }}>
                       <button className="pos-btn" onClick={function() { resumeOrder(h); setModal(null); }}
                         style={Object.assign({}, btnStyle(T.acc,"#000",true), {padding:"5px 14px", fontSize:11})}>
-                        Resume
+                        {tr("resume","Resume")}
                       </button>
                       <button className="pos-btn" onClick={function() { removeHeld(h.orderNo); }}
                         style={Object.assign({}, ghostStyle(true), {padding:"5px 10px", fontSize:11})}>✕</button>
@@ -1114,7 +1117,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
               );
             })}
             <button className="pos-btn" onClick={function() { setModal(null); }}
-              style={Object.assign({}, ghostStyle(), {width:"100%", marginTop:10})}>Close</button>
+              style={Object.assign({}, ghostStyle(), {width:"100%", marginTop:10})}>{tr("close","Close")}</button>
           </div>
         </div>
       )}
@@ -1124,15 +1127,15 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                       alignItems:"center", justifyContent:"center", zIndex:1000 }}>
           <div style={{ background:T.surf, border:"1px solid " + T.border, borderRadius:14,
                         padding:22, width:340 }}>
-            <div style={{ fontWeight:800, color:T.text, fontSize:15, marginBottom:12 }}>📝 Item Note</div>
+            <div style={{ fontWeight:800, color:T.text, fontSize:15, marginBottom:12 }}>📝 {tr("itemNote","Item Note")}</div>
             <input value={noteText} onChange={function(e) { setNoteText(e.target.value); }}
-              placeholder="e.g. no sugar, extra hot…"
+              placeholder={tr("noteHint","e.g. no sugar, extra hot…")}
               style={Object.assign({}, inputStyle(), {marginBottom:12})}/>
             <div style={{ display:"flex", gap:8 }}>
               <button className="pos-btn" onClick={saveNote}
-                style={Object.assign({}, btnStyle(T.acc,"#000"), {flex:1})}>Save</button>
+                style={Object.assign({}, btnStyle(T.acc,"#000"), {flex:1})}>{tr("save","💾 Save")}</button>
               <button className="pos-btn" onClick={function() { setModal(null); }}
-                style={Object.assign({}, ghostStyle(), {flex:1})}>Cancel</button>
+                style={Object.assign({}, ghostStyle(), {flex:1})}>{tr("cancel","Cancel")}</button>
             </div>
           </div>
         </div>
@@ -1146,13 +1149,13 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                         padding:22, width:320, textAlign:"center" }}>
             <div style={{ fontSize:36, marginBottom:8 }}>🍳</div>
             <div style={{ fontWeight:800, color:T.success, fontSize:15, marginBottom:8 }}>
-              Sent to Kitchen
+              {tr("sentToKitchenTitle","Sent to Kitchen")}
             </div>
             <div style={{ fontSize:12, color:T.muted, marginBottom:16 }}>
-              Order {orderNo} has been sent.
+              {tr("receiptOrder","Order")} {orderNo} {tr("sentToKitchenConfirm","has been sent.")}
             </div>
             <button className="pos-btn" onClick={function() { setModal(null); }}
-              style={Object.assign({}, btnStyle(T.acc,"#000"), {width:"100%"})}>OK</button>
+              style={Object.assign({}, btnStyle(T.acc,"#000"), {width:"100%"})}>{tr("okBtn","OK")}</button>
           </div>
         </div>
       )}
@@ -1169,7 +1172,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
             <div style={{ padding:"16px 18px 12px", borderBottom:"1px solid " + T.border,
                           display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div style={{ fontWeight:900, color:T.acc, fontSize:15, letterSpacing:".04em" }}>
-                🧾 Receipt Preview
+                {tr("receiptPreview","🧾 Receipt Preview")}
               </div>
               <div style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:700,
                             color:"#4a6080", fontSize:12 }}>
@@ -1199,14 +1202,14 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                   var o = receiptOrder;
 
                   // ── Type badge ──
-                  var typeCfg = o.type === "dine-in"  ? {icon:"🍽", label:"DINE-IN",   col:"#58a6ff"}
-                              : o.type === "takeaway" ? {icon:"🛍", label:"TAKEAWAY",  col:"#f0a500"}
-                              : o.type === "delivery" ? {icon:"🚚", label:"DELIVERY",  col:"#3fb950"}
+                  var typeCfg = o.type === "dine-in"  ? {icon:"🍽", label:tr("dineIn","Dine-In").toUpperCase(),    col:"#58a6ff"}
+                              : o.type === "takeaway" ? {icon:"🛍", label:tr("takeaway","Takeaway").toUpperCase(),  col:"#f0a500"}
+                              : o.type === "delivery" ? {icon:"🚚", label:tr("delivery","Delivery").toUpperCase(),  col:"#3fb950"}
                               : {icon:"🧾", label:(o.type||"ORDER").toUpperCase(), col:"#7d8590"};
 
                   // ── Flat meta rows (order, cashier) ──
                   var metaRows = [
-                    ["Order",                       o.orderNo],
+                    [tr("receiptOrder","Order"),     o.orderNo],
                     [tr("receiptCashier","Cashier"), o.cashier || "—"],
                     o.tableNo ? [tr("receiptTable","Table"), o.tableNo] : null,
                   ].filter(Boolean);
@@ -1246,17 +1249,17 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                                       border:"1px solid #1e2d4a", padding:"8px 10px" }}>
                           <div style={{ fontSize:9, color:"#4a6080", fontWeight:800,
                                         letterSpacing:".1em", marginBottom:6 }}>
-                            👤 CUSTOMER INFORMATION
+                            👤 {tr("customerInfoLabel","CUSTOMER INFORMATION")}
                           </div>
                           {o.custName && (
                             <div style={{ fontSize:11, marginBottom:3 }}>
-                              <span style={{ color:"#4a6080" }}>Name: </span>
+                              <span style={{ color:"#4a6080" }}>{tr("nameLabel","Name:")} </span>
                               <span style={{ color:T.sub, fontWeight:700 }}>{o.custName}</span>
                             </div>
                           )}
                           {o.custPhone && (
                             <div style={{ fontSize:11 }}>
-                              <span style={{ color:"#4a6080" }}>Phone: </span>
+                              <span style={{ color:"#4a6080" }}>{tr("phoneLabel","Phone:")} </span>
                               <span style={{ color:T.sub, fontWeight:700 }}>{o.custPhone}</span>
                             </div>
                           )}
@@ -1270,7 +1273,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                           <div style={{ fontSize:9, color:"#3fb950", fontWeight:800,
                                         letterSpacing:".1em", marginBottom:5, display:"flex",
                                         alignItems:"center", gap:5 }}>
-                            📍 DELIVERY ADDRESS
+                            📍 {tr("deliveryAddressTitle","DELIVERY ADDRESS")}
                           </div>
                           <div style={{ fontSize:11, color:T.sub, fontWeight:600,
                                         whiteSpace:"pre-wrap", wordBreak:"break-word",
@@ -1286,7 +1289,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                                       border:"1px solid #2a200a", padding:"8px 10px" }}>
                           <div style={{ fontSize:9, color:"#f0a500", fontWeight:800,
                                         letterSpacing:".1em", marginBottom:5 }}>
-                            {o.type === "delivery" ? "📝 DELIVERY NOTES" : "📝 TAKEAWAY NOTES"}
+                            {"📝 " + (o.type === "delivery" ? tr("deliveryNotesTitle","DELIVERY NOTES") : tr("takeawayNotesTitle","TAKEAWAY NOTES"))}
                           </div>
                           <div style={{ fontSize:11, color:T.sub, fontStyle:"italic",
                                         whiteSpace:"pre-wrap", wordBreak:"break-word",
@@ -1339,7 +1342,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                 {[
                   [tr("subtotal","Subtotal"),                           cur(receiptOrder.subtotal, sym),     T.sub   ],
                   receiptOrder.discAmt > 0
-                    ? ["Discount (" + receiptOrder.discPct + "%)", "–" + cur(receiptOrder.discAmt, sym), T.warn]
+                    ? [tr("discount","Discount") + " (" + receiptOrder.discPct + "%)", "–" + cur(receiptOrder.discAmt, sym), T.warn]
                     : null,
                   receiptOrder.svcAmt > 0
                     ? [tr("service","Service"),                         "+" + cur(receiptOrder.svcAmt, sym), T.sub]
@@ -1360,7 +1363,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                 {/* Grand total */}
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
                               borderTop:"1px solid " + T.border, paddingTop:8, marginTop:4 }}>
-                  <span style={{ fontWeight:900, color:T.text, fontSize:14 }}>TOTAL</span>
+                  <span style={{ fontWeight:900, color:T.text, fontSize:14 }}>{tr("total","TOTAL")}</span>
                   <span style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:900,
                                  fontSize:20, color:T.acc }}>
                     {cur(receiptOrder.grand, sym)}
@@ -1374,13 +1377,13 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                     ...(function() {
                       var o = receiptOrder;
                       if ((o.payMethod === "split" || o.payMethod === "Split") && Array.isArray(o.payments) && o.payments.length > 0) {
-                        return [["Payment", "Split"]].concat(
+                        return [[tr("receiptPayment","Payment"), tr("split","Split")]].concat(
                           o.payments.filter(function(p){return p.amount>0;}).map(function(p) {
                             return ["  " + p.method, cur(p.amount, sym)];
                           })
                         );
                       }
-                      return [["Payment", o.payMethod || "—"]];
+                      return [[tr("receiptPayment","Payment"), o.payMethod || "—"]];
                     })(),
                     [tr("receiptPaid","Paid"),  cur(receiptOrder.amtPaid, sym)],
                     receiptOrder.change > 0 ? [tr("change","Change"), cur(receiptOrder.change, sym)] : null,
@@ -1398,7 +1401,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
               </div>
 
               <div style={{ textAlign:"center", marginTop:12, fontSize:10, color:"#2a3a50" }}>
-                Thank you for your visit!
+                {tr("thankYou","Thank you for your visit!")}
               </div>
             </div>
 
@@ -1423,17 +1426,16 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                   setTimeout(function() { win.print(); }, 300);
                 }}
                 style={Object.assign({}, btnStyle("#1e3a50","#58a6ff"), {flex:1})}>
-                🖨 Print
+                {tr("print","🖨 Print")}
               </button>
               <button className="pos-btn"
                 onClick={function() {
-                  // Receipt already saved in IDB by saveOrder — just close
                   showToast(tr("orderSaved","Order paid · Receipt saved"), "ok");
                   setReceiptOrder(null);
                   resetOrder();
                 }}
                 style={Object.assign({}, btnStyle(T.success,"#000"), {flex:2, fontWeight:800})}>
-                ✓ Done / Skip Print
+                {tr("skipPrint","✓ Done / Skip Print")}
               </button>
             </div>
           </div>
@@ -1449,7 +1451,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                         flexDirection:"column", overflow:"hidden" }}>
             <div style={{ padding:"14px 16px 10px", borderBottom:"1px solid " + T.border,
                           display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div style={{ fontWeight:800, color:T.text, fontSize:15 }}>🪑 Select Table</div>
+              <div style={{ fontWeight:800, color:T.text, fontSize:15 }}>🪑 {tr("selectTable","Select Table")}</div>
               <button className="pos-btn" onClick={function() { setShowTablePicker(false); }}
                 style={{ background:"transparent", border:"none", color:T.muted,
                          fontSize:18, cursor:"pointer", padding:"0 4px" }}>✕</button>
@@ -1458,8 +1460,8 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
               {tables.length === 0 ? (
                 <div style={{ textAlign:"center", padding:"30px 0", color:T.muted }}>
                   <div style={{ fontSize:28, marginBottom:8 }}>🪑</div>
-                  <div style={{ fontSize:12 }}>No tables configured.</div>
-                  <div style={{ fontSize:11, marginTop:4 }}>Go to Settings → Tables to add tables.</div>
+                  <div style={{ fontSize:12 }}>{tr("noTablesConfigured","No tables configured.")}</div>
+                  <div style={{ fontSize:11, marginTop:4 }}>{tr("noTablesHint","Go to Settings → Tables to add tables.")}</div>
                 </div>
               ) : (
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))", gap:8 }}>
@@ -1487,7 +1489,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                             }
                             // Occupied but no active order found — offer to clear the stale status
                             if (!window.confirm(
-                              "Table " + tbl.number + " is marked Occupied but no active order was found.\n\nClear table status and use it for a new order?"
+                              tr("tableLabel","Table") + " " + tbl.number + " " + tr("tableOccupiedNoOrder","is marked Occupied but no active order was found.\n\nClear table status and use it for a new order?")
                             )) return;
                             // Clear stale occupied status
                             if (firebaseServices && firebaseServices.tables) {
@@ -1521,7 +1523,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                         )}
                         <div style={{ fontSize:9, fontWeight:700,
                                       color: isCurrent ? T.acc : isOccupied ? "#f85149" : "#3fb950" }}>
-                          {isCurrent ? "✓ Selected" : tbl.status}
+                          {isCurrent ? tr("tableSelected","✓ Selected") : tbl.status}
                         </div>
                         {tbl.capacity > 0 && (
                           <div style={{ fontSize:9, color:T.muted, marginTop:2 }}>👥 {tbl.capacity}</div>
@@ -1539,7 +1541,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                   style={{ width:"100%", background:"transparent", border:"1px solid #f8514940",
                            color:"#f85149", borderRadius:8, padding:"7px 0", fontSize:12,
                            fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-                  ✕ Clear Table Selection
+                  {tr("clearTableSelection","✕ Clear Table Selection")}
                 </button>
               </div>
             )}
@@ -1557,15 +1559,15 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
             <div style={{ textAlign:"center", marginBottom:14 }}>
               <div style={{ fontSize:36, marginBottom:8 }}>🪑</div>
               <div style={{ fontWeight:900, color:"#f0a500", fontSize:16, marginBottom:6 }}>
-                Table Already Has an Active Order
+                {tr("tableActiveOrderTitle","Table Already Has an Active Order")}
               </div>
               <div style={{ fontSize:12, color:T.muted, lineHeight:1.5 }}>
-                Table {tableConflict.held.tableNo || "—"} has an active order
+                {tr("tableLabel","Table")} {tableConflict.held.tableNo || "—"} {tr("tableHasActiveOrder","has an active order")}
                 {" "}(<span style={{ fontFamily:"'JetBrains Mono',monospace", color:T.acc }}>
                   {tableConflict.held.orderNo}
                 </span>)
                 {tableConflict.held.cart && tableConflict.held.cart.length > 0
-                  ? " with " + tableConflict.held.cart.length + " item(s)"
+                  ? " " + tr("with","with") + " " + tableConflict.held.cart.length + " " + tr("itemsLabel","items")
                   : ""}.
               </div>
             </div>
@@ -1574,8 +1576,7 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
             {cart.length > 0 && (
               <div style={{ background:"#1a1205", border:"1px solid #f0a50030", borderRadius:9,
                             padding:"9px 12px", marginBottom:14, fontSize:12, color:"#f0a500" }}>
-                ⚠ You have {cart.length} unsaved item(s) in the current cart. Resuming the
-                existing order will discard them.
+                ⚠ {tr("unsavedCartWarning","You have")} {cart.length} {tr("unsavedCartWarning2","unsaved item(s) in the current cart. Resuming the existing order will discard them.")}
               </div>
             )}
 
@@ -1589,14 +1590,14 @@ export default function POS({ onNavigate, tenant, currentScreen }) {
                 style={Object.assign({}, btnStyle(T.acc,"#000"), {
                   padding:"11px 0", fontWeight:800, fontSize:13
                 })}>
-                ✅ Resume Existing Order ({tableConflict.held.orderNo})
+                {tr("resumeExistingOrder","✅ Resume Existing Order")} ({tableConflict.held.orderNo})
               </button>
               <button className="pos-btn"
                 onClick={function() { setTableConflict(null); }}
                 style={Object.assign({}, ghostStyle(), {
                   padding:"10px 0", fontSize:13
                 })}>
-                Cancel — Keep Current Cart
+                {tr("cancelKeepCart","Cancel — Keep Current Cart")}
               </button>
             </div>
           </div>

@@ -86,6 +86,7 @@ function monthOptions() {
 
 // ── Employee Form Modal ────────────────────────────────────────────────
 function EmployeeModal({ emp, onSave, onClose }) {
+  const { t } = useLang();
   const [f, setF] = useState({
     name:          emp?.name          || "",
     role:          emp?.role          || "Cashier",
@@ -121,18 +122,18 @@ function EmployeeModal({ emp, onSave, onClose }) {
       <div style={{ background:C.surf, border:`1px solid ${C.bdr}`, borderRadius:14,
                     width:420, maxWidth:"96vw", maxHeight:"90vh", overflowY:"auto", padding:22 }}>
         <div style={{ fontWeight:800, color:C.text, fontSize:15, marginBottom:16 }}>
-          {emp?.id ? "✏ Edit Employee" : "👤 New Employee"}
+          {emp?.id ? t("editEmployeeTitle") : t("newEmployeeTitle")}
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
           <div style={{ gridColumn:"span 2" }}>
-            <Label>FULL NAME *</Label>
+            <Label>{t("fullNameField")} *</Label>
             <input value={f.name} onChange={e=>set("name",e.target.value)}
               placeholder="e.g. Sara Ahmad" autoFocus
               style={{...inputStyle(), border:`1px solid ${errors.name ? "#f8514960" : C.bdr}`}}/>
             {errors.name && <div style={{fontSize:10,color:"#f85149",marginTop:3}}>{errors.name}</div>}
           </div>
           <div>
-            <Label>ROLE</Label>
+            <Label>{t("roleField")}</Label>
             <select value={f.role} onChange={e=>set("role",e.target.value)}
               style={{...inputStyle()}}>
               {["Owner","Manager","Cashier","Kitchen","Waiter","Chef","Driver","Cleaner","Other"]
@@ -140,21 +141,21 @@ function EmployeeModal({ emp, onSave, onClose }) {
             </select>
           </div>
           <div>
-            <Label>STATUS</Label>
+            <Label>{t("status")}</Label>
             <select value={f.status} onChange={e=>set("status",e.target.value)}
               style={{...inputStyle()}}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="active">{t("activeEmployee")}</option>
+              <option value="inactive">{t("inactiveEmployee")}</option>
             </select>
           </div>
           <div>
-            <Label>PHONE</Label>
+            <Label>{t("phoneField")}</Label>
             <input value={f.phone} onChange={e=>set("phone",e.target.value)}
               placeholder="+961..." style={{...inputStyle(), border:`1px solid ${errors.phone ? "#f8514960" : C.bdr}`}}/>
             {errors.phone && <div style={{fontSize:10,color:"#f85149",marginTop:3}}>{errors.phone}</div>}
           </div>
           <div>
-            <Label>MONTHLY SALARY ($)</Label>
+            <Label>{t("colMonthlySalary")} ($)</Label>
             <input type="number" min="0" step="0.01" value={f.monthlySalary}
               onChange={e=>set("monthlySalary",e.target.value)}
               placeholder="0.00"
@@ -162,12 +163,12 @@ function EmployeeModal({ emp, onSave, onClose }) {
             {errors.monthlySalary && <div style={{fontSize:10,color:"#f85149",marginTop:3}}>{errors.monthlySalary}</div>}
           </div>
           <div>
-            <Label>HIRE DATE</Label>
+            <Label>{t("colHireDate")}</Label>
             <input type="date" value={f.hireDate} onChange={e=>set("hireDate",e.target.value)}
               style={inputStyle()}/>
           </div>
           <div>
-            <Label>NOTES (optional)</Label>
+            <Label>{t("notesOptional")}</Label>
             <input value={f.notes} onChange={e=>set("notes",e.target.value)}
               placeholder="Any notes..." style={inputStyle()}/>
           </div>
@@ -175,9 +176,9 @@ function EmployeeModal({ emp, onSave, onClose }) {
         <div style={{ display:"flex", gap:8, marginTop:6 }}>
           <button onClick={save} disabled={saving}
             style={{...btn(C.acc,"#000"), flex:2}}>
-            {saving ? "Saving…" : "💾 Save Employee"}
+            {saving ? t("savingLabel") : t("saveEmployeeBtn")}
           </button>
-          <button onClick={onClose} style={{...ghostBtn(), flex:1}}>Cancel</button>
+          <button onClick={onClose} style={{...ghostBtn(), flex:1}}>{t("cancel")}</button>
         </div>
       </div>
     </div>
@@ -187,6 +188,7 @@ function EmployeeModal({ emp, onSave, onClose }) {
 // ── Advance Form Modal ─────────────────────────────────────────────────
 function AdvanceModal({ employees, preselected, onSave, onClose }) {
   const { user } = useAuth();
+  const { t } = useLang();
   const [f, setF] = useState({
     employeeId: preselected?.id || (employees[0]?.id || ""),
     amount:     "",
@@ -197,8 +199,8 @@ function AdvanceModal({ employees, preselected, onSave, onClose }) {
   const [saving, setSaving] = useState(false);
 
   async function save() {
-    if (!f.employeeId) { alert("Select an employee"); return; }
-    if (!safeNum(f.amount) || safeNum(f.amount) <= 0) { alert("Enter a valid amount"); return; }
+    if (!f.employeeId) { alert(t("employeeFieldReq")); return; }
+    if (!safeNum(f.amount) || safeNum(f.amount) <= 0) { alert(t("amountFieldReq")); return; }
     setSaving(true);
     try { await onSave({ ...f, createdBy: user?.name || "admin" }); }
     finally { setSaving(false); }
@@ -210,10 +212,10 @@ function AdvanceModal({ employees, preselected, onSave, onClose }) {
       <div style={{ background:C.surf, border:`1px solid ${C.bdr}`, borderRadius:14,
                     width:380, maxWidth:"96vw", padding:22 }}>
         <div style={{ fontWeight:800, color:C.text, fontSize:15, marginBottom:16 }}>
-          💸 Record Salary Advance
+          {t("recordAdvanceTitle")}
         </div>
         <div style={{ marginBottom:10 }}>
-          <Label>EMPLOYEE *</Label>
+          <Label>{t("employeeFieldReq")}</Label>
           <select value={f.employeeId} onChange={e=>set("employeeId",e.target.value)}
             style={{...inputStyle()}}>
             {employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.role})</option>)}
@@ -221,18 +223,18 @@ function AdvanceModal({ employees, preselected, onSave, onClose }) {
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
           <div>
-            <Label>AMOUNT ($) *</Label>
+            <Label>{t("amountFieldReq")}</Label>
             <input type="number" min="0.01" step="0.01" value={f.amount}
               onChange={e=>set("amount",e.target.value)} placeholder="0.00" autoFocus
               style={{...inputStyle(), fontFamily:"'JetBrains Mono',monospace"}}/>
           </div>
           <div>
-            <Label>DATE</Label>
+            <Label>{t("date")}</Label>
             <input type="date" value={f.date} onChange={e=>set("date",e.target.value)}
               style={inputStyle()}/>
           </div>
           <div style={{ gridColumn:"span 2" }}>
-            <Label>REASON / NOTE</Label>
+            <Label>{t("reasonNoteField")}</Label>
             <input value={f.note} onChange={e=>set("note",e.target.value)}
               placeholder="e.g. Emergency advance" style={inputStyle()}/>
           </div>
@@ -240,9 +242,9 @@ function AdvanceModal({ employees, preselected, onSave, onClose }) {
         <div style={{ display:"flex", gap:8 }}>
           <button onClick={save} disabled={saving}
             style={{...btn(C.acc,"#000"), flex:2}}>
-            {saving ? "Saving…" : "💾 Record Advance"}
+            {saving ? t("savingLabel") : t("recordAdvanceBtn")}
           </button>
-          <button onClick={onClose} style={{...ghostBtn(), flex:1}}>Cancel</button>
+          <button onClick={onClose} style={{...ghostBtn(), flex:1}}>{t("cancel")}</button>
         </div>
       </div>
     </div>
@@ -300,7 +302,7 @@ export default function Payroll({ onBack }) {
       setActiveEmps(emps);
     } catch(e) {
       console.error('Error loading payroll:', e);
-      showToast("Load failed: " + e.message, "err");
+      showToast(t("loadFailed") + e.message, "err");
     }
     setLoading(false);
   }, [month, useFirebase, firebaseServices]);
@@ -318,11 +320,11 @@ export default function Payroll({ onBack }) {
         console.log('Employee saved to localStorage');
       }
       setEmpModal(null);
-      showToast(data.id ? "Employee updated" : "Employee added");
+      showToast(data.id ? t("employeeUpdated") : t("employeeAdded"));
       load();
     } catch(e) {
       console.error('Error saving employee:', e);
-      showToast("Save failed: " + e.message, "err");
+      showToast(t("loadFailed") + e.message, "err");
     }
   }
 
@@ -337,11 +339,11 @@ export default function Payroll({ onBack }) {
         console.log('Advance saved to localStorage');
       }
       setAdvModal(null);
-      showToast("Advance recorded");
+      showToast(t("advanceRecorded"));
       load();
     } catch(e) {
       console.error('Error saving advance:', e);
-      showToast("Save failed: " + e.message, "err");
+      showToast(t("loadFailed") + e.message, "err");
     }
   }
 
@@ -356,11 +358,11 @@ export default function Payroll({ onBack }) {
         console.log('Employee deleted from localStorage');
       }
       setDelEmpId(null);
-      showToast("Employee deleted", "warn");
+      showToast(t("employeeDeleted"), "warn");
       load();
     } catch(e) {
       console.error('Error deleting employee:', e);
-      showToast("Delete failed: " + e.message, "err");
+      showToast(t("deleteFailed") + ": " + e.message, "err");
     }
   }
 
@@ -375,11 +377,11 @@ export default function Payroll({ onBack }) {
         console.log('Advance deleted from localStorage');
       }
       setDelAdvId(null);
-      showToast("Advance deleted", "warn");
+      showToast(t("advanceDeleted"), "warn");
       load();
     } catch(e) {
       console.error('Error deleting advance:', e);
-      showToast("Delete failed: " + e.message, "err");
+      showToast(t("deleteFailed") + ": " + e.message, "err");
     }
   }
 
@@ -421,7 +423,7 @@ export default function Payroll({ onBack }) {
           <button onClick={onBack}
             style={{ background:"transparent", border:"none", color:C.muted,
                      fontSize:18, cursor:"pointer", padding:"0 4px" }}>←</button>
-          <span style={{ fontWeight:800, color:C.acc, fontSize:16 }}>💼 Staff Payroll</span>
+          <span style={{ fontWeight:800, color:C.acc, fontSize:16 }}>{t("payrollTitle")}</span>
         </div>
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
           {/* Month selector */}
@@ -436,10 +438,10 @@ export default function Payroll({ onBack }) {
             ))}
           </select>
           <button onClick={() => setAdvModal({})} style={btn(C.acc,"#000")}>
-            + Advance
+            {t("addAdvanceBtn")}
           </button>
           <button onClick={() => setEmpModal({})} style={btn(C.info,"#000")}>
-            + Employee
+            {t("addEmployeeBtn")}
           </button>
         </div>
       </header>
@@ -478,24 +480,24 @@ export default function Payroll({ onBack }) {
         {/* Summary cards */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",
                       gap:10, marginBottom:18 }}>
-          <Pill label="Total Employees"    value={rows.length}                   col={C.info}/>
-          <Pill label="Total Salaries"     value={CUR(summary.totalSalaries)}    col={C.acc}/>
-          <Pill label="Total Advances"     value={CUR(summary.totalAdvances)}    col={C.warn}/>
-          <Pill label="Remaining Payroll"  value={CUR(summary.totalRemaining)}   col={C.success}/>
+          <Pill label={t("totalEmployees")}   value={rows.length}                   col={C.info}/>
+          <Pill label={t("totalSalaries")}    value={CUR(summary.totalSalaries)}    col={C.acc}/>
+          <Pill label={t("totalAdvances")}    value={CUR(summary.totalAdvances)}    col={C.warn}/>
+          <Pill label={t("remainingPayroll")} value={CUR(summary.totalRemaining)}   col={C.success}/>
         </div>
 
         {/* ── PAYROLL TAB ── */}
         {tab === "payroll" && (
           loading ? (
             <div style={{ textAlign:"center", color:C.muted, padding:"40px 0" }}>
-              Loading payroll…
+              {t("loading")}
             </div>
           ) : rows.length === 0 ? (
             <div style={{ textAlign:"center", color:C.muted, padding:"60px 0" }}>
               <div style={{ fontSize:32, marginBottom:8 }}>👤</div>
-              <div>No employees yet.</div>
+              <div>{t("noEmployeesYet")}</div>
               <div style={{ fontSize:12, marginTop:4 }}>
-                Add employees using the + Employee button above.
+                {t("addEmployeeHint")}
               </div>
             </div>
           ) : (
@@ -528,7 +530,7 @@ export default function Payroll({ onBack }) {
                           {emp.status === "inactive" && (
                             <span style={{ marginLeft:6, fontSize:10, color:C.muted,
                                            background:C.surf, borderRadius:4,
-                                           padding:"1px 5px" }}>Inactive</span>
+                                           padding:"1px 5px" }}>{t("inactiveEmployee")}</span>
                           )}
                         </div>
                         <div style={{ fontSize:11, color:C.muted }}>{emp.role}</div>
@@ -537,21 +539,21 @@ export default function Payroll({ onBack }) {
                       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,90px)",
                                     gap:8, textAlign:"right" }}>
                         <div>
-                          <div style={{ fontSize:10, color:C.muted }}>Salary</div>
+                          <div style={{ fontSize:10, color:C.muted }}>{t("colMonthlySalary")}</div>
                           <div style={{ fontFamily:"'JetBrains Mono',monospace",
                                         fontWeight:700, color:C.acc, fontSize:13 }}>
                             {CUR(row.monthlySalary)}
                           </div>
                         </div>
                         <div>
-                          <div style={{ fontSize:10, color:C.muted }}>Advances</div>
+                          <div style={{ fontSize:10, color:C.muted }}>{t("totalAdvances")}</div>
                           <div style={{ fontFamily:"'JetBrains Mono',monospace",
                                         fontWeight:700, color:C.warn, fontSize:13 }}>
                             -{CUR(row.totalAdvances)}
                           </div>
                         </div>
                         <div>
-                          <div style={{ fontSize:10, color:C.muted }}>Remaining</div>
+                          <div style={{ fontSize:10, color:C.muted }}>{t("remainingSalaryLabel")}</div>
                           <div style={{ fontFamily:"'JetBrains Mono',monospace",
                                         fontWeight:800, color:C.success, fontSize:13 }}>
                             {CUR(row.remainingSalary)}
@@ -571,7 +573,7 @@ export default function Payroll({ onBack }) {
                                         width: pct + "%" }}/>
                         </div>
                         <div style={{ fontSize:9, color:C.muted, marginTop:2 }}>
-                          {pct.toFixed(0)}% of salary advanced
+                          {pct.toFixed(0)}{t("pctSalaryAdvanced")}
                         </div>
                       </div>
                     )}
@@ -583,17 +585,17 @@ export default function Payroll({ onBack }) {
                                       alignItems:"center", marginBottom:10 }}>
                           <div style={{ fontSize:11, color:C.muted, fontWeight:700,
                                         letterSpacing:"0.06em" }}>
-                            ADVANCE HISTORY — {monthLabel(month)}
+                            {t("advanceHistoryTitle")} — {monthLabel(month)}
                           </div>
                           <div style={{ display:"flex", gap:6 }}>
                             <button onClick={() => setAdvModal({ preselected: emp })}
                               style={{...btn(C.acc+"22","#f0a500"), border:`1px solid ${C.acc}40`,
                                       fontSize:11, padding:"4px 12px"}}>
-                              + Add Advance
+                              {t("addAdvanceInline")}
                             </button>
                             <button onClick={() => setEmpModal(emp)}
                               style={{...ghostBtn(), fontSize:11, padding:"4px 10px"}}>
-                              ✏ Edit
+                              {t("edit")}
                             </button>
                             <button onClick={() => setDelEmpId(emp.id)}
                               style={{...ghostBtn(true), fontSize:11, padding:"4px 10px"}}>
@@ -605,7 +607,7 @@ export default function Payroll({ onBack }) {
                         {row.advances.length === 0 ? (
                           <div style={{ fontSize:12, color:C.muted,
                                         padding:"8px 0", textAlign:"center" }}>
-                            No advances recorded for {monthLabel(month)}
+                            {t("noAdvancesForMonth")} {monthLabel(month)}
                           </div>
                         ) : (
                           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
@@ -646,7 +648,7 @@ export default function Payroll({ onBack }) {
                                         background:C.bg, borderRadius:8,
                                         border:`1px solid ${C.bdr}` }}>
                             <div style={{ fontSize:12, color:C.muted }}>
-                              Remaining salary ({monthLabel(month)})
+                              {t("remainingSalaryLabel")} ({monthLabel(month)})
                             </div>
                             <div style={{ fontFamily:"'JetBrains Mono',monospace",
                                           fontWeight:900, fontSize:14, color:C.success }}>
@@ -666,11 +668,11 @@ export default function Payroll({ onBack }) {
         {/* ── EMPLOYEES TAB ── */}
         {tab === "employees" && (
           loading ? (
-            <div style={{ textAlign:"center", color:C.muted, padding:"40px 0" }}>Loading…</div>
+            <div style={{ textAlign:"center", color:C.muted, padding:"40px 0" }}>{t("loading")}</div>
           ) : payroll.rows.length === 0 ? (
             <div style={{ textAlign:"center", color:C.muted, padding:"60px 0" }}>
               <div style={{ fontSize:32, marginBottom:8 }}>👥</div>
-              No employees yet.
+              {t("noEmployeesYet")}
             </div>
           ) : (
             <div style={{ overflowX:"auto" }}>
@@ -678,7 +680,7 @@ export default function Payroll({ onBack }) {
                               fontFamily:fam, fontSize:12 }}>
                 <thead>
                   <tr style={{ background:C.surf, color:C.muted }}>
-                    {["Name","Role","Phone","Monthly Salary","Hire Date","Status","Actions"]
+                    {[t("name"),t("roleField"),t("phoneField"),t("colMonthlySalary"),t("colHireDate"),t("status"),t("actions")]
                       .map(h => (
                         <th key={h} style={{ padding:"10px 12px", textAlign:"left",
                                              fontWeight:700, letterSpacing:"0.06em",
@@ -710,7 +712,7 @@ export default function Payroll({ onBack }) {
                                        border: `1px solid ${e.status==="active" ? C.success+"40" : C.bdr}`,
                                        borderRadius:10, padding:"2px 8px", fontSize:10,
                                        fontWeight:700 }}>
-                          {e.status === "active" ? "✓ Active" : "○ Inactive"}
+                          {e.status === "active" ? t("activeEmployee") : t("inactiveEmployee")}
                         </span>
                       </td>
                       <td style={{ padding:"10px 12px" }}>
@@ -762,15 +764,15 @@ export default function Payroll({ onBack }) {
           <div style={{ background:C.surf, border:`1px solid ${C.bdr}`, borderRadius:12,
                         padding:22, maxWidth:320, width:"96vw", textAlign:"center" }}>
             <div style={{ fontSize:32, marginBottom:8 }}>⚠️</div>
-            <div style={{ fontWeight:700, color:C.text, marginBottom:6 }}>Delete Employee?</div>
+            <div style={{ fontWeight:700, color:C.text, marginBottom:6 }}>{t("deleteUserConfirm")}</div>
             <div style={{ fontSize:12, color:C.muted, marginBottom:16 }}>
-              This will also delete all their advance records and cannot be undone.
+              {t("deleteUserWarning")}
             </div>
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={() => deleteEmployee(delEmpId)}
-                style={{...btn(C.danger,"#fff"), flex:1}}>Delete</button>
+                style={{...btn(C.danger,"#fff"), flex:1}}>{t("delete")}</button>
               <button onClick={() => setDelEmpId(null)}
-                style={{...ghostBtn(), flex:1}}>Cancel</button>
+                style={{...ghostBtn(), flex:1}}>{t("cancel")}</button>
             </div>
           </div>
         </div>
@@ -782,15 +784,15 @@ export default function Payroll({ onBack }) {
                       display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000 }}>
           <div style={{ background:C.surf, border:`1px solid ${C.bdr}`, borderRadius:12,
                         padding:22, maxWidth:300, width:"96vw", textAlign:"center" }}>
-            <div style={{ fontWeight:700, color:C.text, marginBottom:6 }}>Delete this advance?</div>
+            <div style={{ fontWeight:700, color:C.text, marginBottom:6 }}>{t("deleteUserConfirm")}</div>
             <div style={{ fontSize:12, color:C.muted, marginBottom:14 }}>
-              The remaining salary will be recalculated.
+              {t("deleteUserWarning")}
             </div>
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={() => deleteAdvance(delAdvId)}
-                style={{...btn(C.danger,"#fff"), flex:1}}>Delete</button>
+                style={{...btn(C.danger,"#fff"), flex:1}}>{t("delete")}</button>
               <button onClick={() => setDelAdvId(null)}
-                style={{...ghostBtn(), flex:1}}>Cancel</button>
+                style={{...ghostBtn(), flex:1}}>{t("cancel")}</button>
             </div>
           </div>
         </div>

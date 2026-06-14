@@ -169,16 +169,21 @@ export default function Purchasing({ onBack }) {
 
       {/* ═══ HEADER ═══ */}
       <header style={{background:C.surf,borderBottom:`2px solid ${C.acc}`,padding:"0 16px",height:54,display:"flex",alignItems:"center",gap:10,flexShrink:0,flexWrap:"wrap"}}>
-        <button className="pu-btn" onClick={onBack} style={{...Ghost(C.muted,true)}}>← Back</button>
+        <button className="pu-btn" onClick={onBack} style={{...Ghost(C.muted,true)}}>{t("back")}</button>
         <div style={{width:1,height:24,background:C.bdr}}/>
         <span style={{fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:900,fontSize:17,color:C.acc,letterSpacing:"0.07em"}}>KAVO<span style={{color:C.text,opacity:0.3}}>-SYS</span></span>
-        <span style={{fontSize:10,fontWeight:800,color:C.muted,letterSpacing:"0.1em"}}>PURCHASING</span>
+        <span style={{fontSize:10,fontWeight:800,color:C.muted,letterSpacing:"0.1em"}}>{t("purchasingRole")}</span>
 
         <div style={{display:"flex",gap:3,marginLeft:6,flexWrap:"wrap"}}>
-          {TABS.map(t=>(
-            <button key={t.id} className="pu-tab pu-btn" onClick={()=>setTab(t.id)}
-              style={{background:tab===t.id?C.acc+"22":"transparent",border:`1px solid ${tab===t.id?C.acc+"60":C.bdr}`,color:tab===t.id?C.acc:C.muted,borderRadius:8,padding:"5px 12px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",transition:"all 0.14s"}}>
-              {t.label}
+          {[
+            {id:"dashboard", label: t("dashboard")},
+            {id:"orders",    label: t("purchaseOrdersTab")},
+            {id:"suppliers", label: t("suppliersTab")},
+            {id:"reports",   label: t("reportsTab")},
+          ].map(tb=>(
+            <button key={tb.id} className="pu-tab pu-btn" onClick={()=>setTab(tb.id)}
+              style={{background:tab===tb.id?C.acc+"22":"transparent",border:`1px solid ${tab===tb.id?C.acc+"60":C.bdr}`,color:tab===tb.id?C.acc:C.muted,borderRadius:8,padding:"5px 12px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",transition:"all 0.14s"}}>
+              {tb.label}
             </button>
           ))}
         </div>
@@ -186,11 +191,11 @@ export default function Purchasing({ onBack }) {
         <div style={{flex:1}}/>
         {stats.ordered>0&&(
           <div style={{background:"#58a6ff18",border:"1px solid #58a6ff40",borderRadius:20,padding:"3px 12px",fontSize:11,fontWeight:800,color:C.info}}>
-            📦 {stats.ordered} Pending
+            📦 {stats.ordered} {t("pendingLabel")}
           </div>
         )}
-        {tab==="orders"&&<button className="pu-btn" onClick={()=>{setSelPO(null);setModal("createPO");}} style={{...Btn(C.acc)}}>+ New PO</button>}
-        {tab==="suppliers"&&<button className="pu-btn" onClick={()=>{setSelSup(null);setModal("editSupplier");}} style={{...Btn(C.acc)}}>+ Add Supplier</button>}
+        {tab==="orders"&&<button className="pu-btn" onClick={()=>{setSelPO(null);setModal("createPO");}} style={{...Btn(C.acc)}}>{t("newPOBtn")}</button>}
+        {tab==="suppliers"&&<button className="pu-btn" onClick={()=>{setSelSup(null);setModal("editSupplier");}} style={{...Btn(C.acc)}}>{t("addSupplierBtn")}</button>}
         <div style={{background:umeta.bg,border:`1px solid ${umeta.color}40`,borderRadius:20,padding:"3px 11px",display:"flex",alignItems:"center",gap:5}}>
           <span>{umeta.icon}</span>
           <span style={{fontSize:11,fontWeight:700,color:umeta.color}}>{user?.name}</span>
@@ -207,12 +212,12 @@ export default function Purchasing({ onBack }) {
                 {/* Metric cards */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(165px,1fr))",gap:10,marginBottom:14}}>
                   {[
-                    {icon:"📋",label:"Total POs",        val:stats.total||0,              col:C.info,    mono:false},
-                    {icon:"📝",label:"Draft",            val:stats.draft||0,              col:C.muted,   mono:false},
-                    {icon:"📦",label:"Ordered",          val:stats.ordered||0,            col:C.info,    mono:false},
-                    {icon:"✅",label:"Received",         val:stats.received||0,           col:C.success, mono:false},
-                    {icon:"💰",label:"Total Spend",      val:CUR(stats.totalSpend||0),    col:C.acc,     mono:true},
-                    {icon:"📅",label:"This Month",       val:CUR(stats.monthSpend||0),    col:C.warn,    mono:true},
+                    {icon:"📋",label:t("totalPOs"),        val:stats.total||0,              col:C.info,    mono:false},
+                    {icon:"📝",label:t("draft"),            val:stats.draft||0,              col:C.muted,   mono:false},
+                    {icon:"📦",label:t("ordered"),          val:stats.ordered||0,            col:C.info,    mono:false},
+                    {icon:"✅",label:t("received"),         val:stats.received||0,           col:C.success, mono:false},
+                    {icon:"💰",label:t("totalSpend"),       val:CUR(stats.totalSpend||0),    col:C.acc,     mono:true},
+                    {icon:"📅",label:t("thisMonth"),        val:CUR(stats.monthSpend||0),    col:C.warn,    mono:true},
                   ].map(m=>(
                     <div key={m.label} style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:"13px 15px"}}>
                       <div style={{fontSize:18,marginBottom:5}}>{m.icon}</div>
@@ -225,7 +230,7 @@ export default function Purchasing({ onBack }) {
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                   {/* Recent POs */}
                   <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-                    <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>📋 RECENT PURCHASE ORDERS</div>
+                    <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>📋 {t("recentPOsTitle")}</div>
                     {pos.slice(0,6).map(p=>{
                       const cfg=PO_STATUS_CFG[p.status]||PO_STATUS_CFG.Draft;
                       return(
@@ -242,7 +247,7 @@ export default function Purchasing({ onBack }) {
 
                   {/* Supplier overview */}
                   <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-                    <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>🏢 SUPPLIERS ({suppliers.filter(s=>s.status!=="inactive").length} active)</div>
+                    <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>🏢 {t("suppliersOverTitle")} ({suppliers.filter(s=>s.status!=="inactive").length} {t("active")})</div>
                     {suppliers.filter(s=>s.status!=="inactive").slice(0,6).map(s=>(
                       <div key={s.id} className="pu-row" onClick={()=>{setSelSup(s);setModal("viewSupplier");}} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 8px",borderRadius:7,cursor:"pointer",marginBottom:2,transition:"background 0.12s"}}>
                         <div style={{width:28,height:28,borderRadius:8,background:C.acc+"18",border:`1px solid ${C.acc}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>🏢</div>
@@ -258,7 +263,7 @@ export default function Purchasing({ onBack }) {
 
                 {/* Monthly chart */}
                 <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16,marginTop:12}}>
-                  <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:14,letterSpacing:"0.04em"}}>📅 MONTHLY PURCHASE SPEND</div>
+                  <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:14,letterSpacing:"0.04em"}}>📅 {t("monthlySpendTitle")}</div>
                   <MonthlyChart pos={pos} useFirebase={useFirebase} firebaseServices={firebaseServices}/>
                 </div>
               </div>
@@ -270,7 +275,7 @@ export default function Purchasing({ onBack }) {
                 {/* Filter bar */}
                 <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
                   <div style={{position:"relative",flex:1,minWidth:180}}>
-                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search PO number or supplier…" style={Inp}/>
+                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={t("searchPOPlaceholder")} style={Inp}/>
                     {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16}}>✕</button>}
                   </div>
                   <div style={{display:"flex",gap:5}}>
@@ -280,7 +285,7 @@ export default function Purchasing({ onBack }) {
                       return(
                         <button key={s} className="pu-btn" onClick={()=>setPoFilter(s)}
                           style={{background:on?(cfg.color||C.acc)+"22":"transparent",border:`1px solid ${on?(cfg.color||C.acc)+"60":C.bdr}`,color:on?(cfg.color||C.acc):C.muted,borderRadius:20,padding:"4px 12px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>
-                          {s==="All"?"All":`${cfg.icon||""} ${s}`}
+                          {s==="All"?t("all"):`${cfg.icon||""} ${s}`}
                         </button>
                       );
                     })}
@@ -295,7 +300,7 @@ export default function Purchasing({ onBack }) {
                     <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,overflow:"hidden"}}>
                       {/* Header */}
                       <div style={{display:"grid",gridTemplateColumns:"130px 1fr 100px 100px 90px 100px 180px",gap:0,padding:"8px 14px",borderBottom:`1px solid ${C.bdr}`,background:"#0a1020"}}>
-                        {["PO Number","Supplier","Order Date","Delivery","Items","Total","Actions"].map(h=>(
+                        {[t("poNumber"),t("suppliersLabel"),t("orderDate"),t("delivery"),t("items"),t("total"),t("actions")].map(h=>(
                           <div key={h} style={{fontSize:9,color:C.muted,fontWeight:700,letterSpacing:"0.08em"}}>{h}</div>
                         ))}
                       </div>
@@ -331,7 +336,7 @@ export default function Purchasing({ onBack }) {
             {tab==="suppliers"&&(
               <div className="pu-in">
                 <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center"}}>
-                  <input value={supSearch} onChange={e=>setSupSearch(e.target.value)} placeholder="🔍 Search suppliers…" style={{...Inp,maxWidth:300}}/>
+                  <input value={supSearch} onChange={e=>setSupSearch(e.target.value)} placeholder={t("searchSupplierPlaceholder")} style={{...Inp,maxWidth:300}}/>
                   <span style={{fontSize:11,color:C.muted}}>{visibleSups.length} supplier{visibleSups.length!==1?"s":""}</span>
                 </div>
                 {visibleSups.length===0
@@ -405,7 +410,7 @@ export default function Purchasing({ onBack }) {
               } else {
                 await SupplierService.delete(selSup.id);
               }
-              reload(); setModal(null); showToast("Supplier removed","warn");
+              reload(); setModal(null); showToast(t("supplierUpdated"),"warn");
             }
           }:null}
           onClose={()=>setModal(null)}/>
@@ -446,6 +451,7 @@ function POActions({ p, onView, onReceive, onCancel, onDelete, onEdit }) {
 
 /* ── PO FORM MODAL ───────────────────────────────────*/
 function POFormModal({ po, suppliers, invItems, onSave, onClose }) {
+  const { t } = useLang();
   const today = new Date().toISOString().slice(0,10);
   const [supplierId,    setSupplierId]    = useState(po?.supplierId||"");
   const [supplierName,  setSupplierName]  = useState(po?.supplierName||"");
@@ -475,9 +481,9 @@ function POFormModal({ po, suppliers, invItems, onSave, onClose }) {
   const total=items.reduce((s,i)=>s+safeNum(i.qty)*safeNum(i.unitCost),0);
 
   const save=()=>{
-    if(!supplierId){alert("Select a supplier");return;}
+    if(!supplierId){alert(t("selectSupplierReq"));return;}
     const validItems=items.filter(i=>i.inventoryItemId);
-    if(validItems.length===0){alert("Add at least one item");return;}
+    if(validItems.length===0){alert(t("addLineItemReq"));return;}
     const badQty=validItems.find(i=>!isPositive(i.qty));
     if(badQty){alert(`Qty for "${badQty.inventoryItemName||"item"}" must be greater than 0`);return;}
     const badCost=validItems.find(i=>!isNonNeg(i.unitCost));
@@ -486,41 +492,41 @@ function POFormModal({ po, suppliers, invItems, onSave, onClose }) {
   };
 
   return (
-    <PuModal title={po?.poNo?`Edit ${po.poNo}`:"New Purchase Order"} onClose={onClose} wide>
+    <PuModal title={po?.poNo?`${t("edit")} ${po.poNo}`:t("newPOBtn")} onClose={onClose} wide>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
         <div>
-          <Label>SUPPLIER *</Label>
+          <Label>{t("supplier").toUpperCase()} *</Label>
           <select value={supplierId} onChange={e=>setSupplier(e.target.value)} style={Sel}>
-            <option value="">— Select Supplier —</option>
+            <option value="">{t("selectSupplierPrompt")}</option>
             {suppliers.filter(s=>s.status!=="inactive").map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div>
-          <Label>ORDER DATE</Label>
+          <Label>{t("orderDate").toUpperCase()}</Label>
           <input type="date" value={orderDate} onChange={e=>setOrderDate(e.target.value)} style={Inp}/>
         </div>
         <div>
-          <Label>EXPECTED DELIVERY</Label>
+          <Label>{t("expectedDelivery").toUpperCase()}</Label>
           <input type="date" value={deliveryDate} onChange={e=>setDeliveryDate(e.target.value)} style={Inp}/>
         </div>
         <div>
-          <Label>NOTES</Label>
-          <input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Optional notes…" style={Inp}/>
+          <Label>{t("notes").toUpperCase()}</Label>
+          <input value={notes} onChange={e=>setNotes(e.target.value)} placeholder={t("anyNotes")} style={Inp}/>
         </div>
       </div>
 
       {/* Line items */}
       <div style={{borderTop:`1px solid ${C.bdr}`,paddingTop:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-          <div style={{fontSize:12,fontWeight:800,color:C.text,letterSpacing:"0.04em"}}>📦 LINE ITEMS</div>
-          <button className="pu-btn" onClick={addItem} style={{...Btn(C.acc,undefined,true)}}>+ Add Item</button>
+          <div style={{fontSize:12,fontWeight:800,color:C.text,letterSpacing:"0.04em"}}>{t("lineItems")}</div>
+          <button className="pu-btn" onClick={addItem} style={{...Btn(C.acc,undefined,true)}}>{t("addItemPO")}</button>
         </div>
         {items.length===0
-          ? <div style={{textAlign:"center",padding:24,color:C.muted,fontSize:12}}>Click "+ Add Item" to add inventory items</div>
+          ? <div style={{textAlign:"center",padding:24,color:C.muted,fontSize:12}}>{t("clickAddItemHint")}</div>
           : (
             <>
               <div style={{display:"grid",gridTemplateColumns:"1fr 80px 90px 90px 24px",gap:8,marginBottom:6}}>
-                {["Inventory Item","Qty","Unit Cost","Total",""].map(h=>(
+                {[t("ingredientLabel"),t("qtyLabel"),t("costPriceField"),t("total"),""].map(h=>(
                   <span key={h} style={{fontSize:9,color:C.muted,fontWeight:700,letterSpacing:"0.07em"}}>{h}</span>
                 ))}
               </div>
@@ -545,8 +551,8 @@ function POFormModal({ po, suppliers, invItems, onSave, onClose }) {
       </div>
 
       <div style={{display:"flex",gap:8}}>
-        <button className="pu-btn" onClick={save} style={{...Btn(C.acc),flex:1}}>💾 Save PO</button>
-        <button className="pu-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>
+        <button className="pu-btn" onClick={save} style={{...Btn(C.acc),flex:1}}>{t("savePO")}</button>
+        <button className="pu-btn" onClick={onClose} style={{...Ghost(),flex:1}}>{t("cancel")}</button>
       </div>
     </PuModal>
   );
@@ -554,6 +560,7 @@ function POFormModal({ po, suppliers, invItems, onSave, onClose }) {
 
 /* ── PO DETAIL MODAL ─────────────────────────────────*/
 function PODetailModal({ poId, onClose, onReceive, onCancel, onEdit, useFirebase, firebaseServices }) {
+  const { t } = useLang();
   const [po, setPO] = useState(null);
   useEffect(()=>{
     if (useFirebase) {
@@ -568,12 +575,12 @@ function PODetailModal({ poId, onClose, onReceive, onCancel, onEdit, useFirebase
     <PuModal title={`${cfg.icon} ${po.poNo}`} onClose={onClose} wide>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
         {[
-          {l:"Supplier",    v:po.supplierName||"—"},
-          {l:"Status",      v:po.status},
-          {l:"Order Date",  v:fmtDate(po.orderDate)},
-          {l:"Delivery",    v:fmtDate(po.deliveryDate)},
-          {l:"Created By",  v:po.createdBy||"—"},
-          {l:"Received At", v:po.receivedAt?fmtDT(po.receivedAt):"—"},
+          {l:t("suppliersLabel"),  v:po.supplierName||"—"},
+          {l:t("status"),          v:po.status},
+          {l:t("orderDate"),       v:fmtDate(po.orderDate)},
+          {l:t("delivery"),        v:fmtDate(po.deliveryDate)},
+          {l:t("colUser"),         v:po.createdBy||"—"},
+          {l:t("received"),        v:po.receivedAt?fmtDT(po.receivedAt):"—"},
         ].map(r=>(
           <div key={r.l} style={{background:C.bg,borderRadius:8,padding:"8px 12px"}}>
             <div style={{fontSize:9,color:C.muted,fontWeight:700,letterSpacing:"0.08em",marginBottom:3}}>{r.l}</div>
@@ -585,7 +592,7 @@ function PODetailModal({ poId, onClose, onReceive, onCancel, onEdit, useFirebase
       {/* Items table */}
       <div style={{background:C.bg,borderRadius:10,overflow:"hidden",marginBottom:14}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 70px 90px 90px 90px",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.bdr}`,background:"#0a1020"}}>
-          {["Item","Qty","Unit","Unit Cost","Total"].map(h=>(
+          {[t("ingredientLabel"),t("qtyLabel"),t("unitLabel"),t("costPriceField"),t("total")].map(h=>(
             <span key={h} style={{fontSize:9,color:C.muted,fontWeight:700,letterSpacing:"0.07em"}}>{h}</span>
           ))}
         </div>
@@ -599,15 +606,15 @@ function PODetailModal({ poId, onClose, onReceive, onCancel, onEdit, useFirebase
           </div>
         ))}
         <div style={{display:"flex",justifyContent:"space-between",padding:"10px 12px",fontWeight:900}}>
-          <span style={{color:C.muted}}>Grand Total</span>
+          <span style={{color:C.muted}}>{t("grandTotal")}</span>
           <span style={{fontFamily:"'JetBrains Mono',monospace",color:C.acc,fontSize:16}}>{CUR(po.total)}</span>
         </div>
       </div>
       <div style={{display:"flex",gap:8}}>
-        {(po.status==="Draft"||po.status==="Ordered")&&<button className="pu-btn" onClick={onReceive} style={{...Btn(C.success,"#000"),flex:1}}>✅ Mark as Received</button>}
-        {po.status==="Draft"&&<button className="pu-btn" onClick={onEdit} style={{...Ghost(C.info)}}>✏ Edit</button>}
-        {(po.status==="Draft"||po.status==="Ordered")&&<button className="pu-btn" onClick={onCancel} style={{...Ghost(C.danger)}}>🚫 Cancel</button>}
-        <button className="pu-btn" onClick={onClose} style={{...Ghost()}}>Close</button>
+        {(po.status==="Draft"||po.status==="Ordered")&&<button className="pu-btn" onClick={onReceive} style={{...Btn(C.success,"#000"),flex:1}}>{t("markAsReceived")}</button>}
+        {po.status==="Draft"&&<button className="pu-btn" onClick={onEdit} style={{...Ghost(C.info)}}>{t("edit")}</button>}
+        {(po.status==="Draft"||po.status==="Ordered")&&<button className="pu-btn" onClick={onCancel} style={{...Ghost(C.danger)}}>🚫 {t("cancel")}</button>}
+        <button className="pu-btn" onClick={onClose} style={{...Ghost()}}>{t("close")}</button>
       </div>
     </PuModal>
   );
@@ -627,6 +634,7 @@ function SupplierField({ label, value, onChange, type="text", ph="", error="" })
 
 /* ── SUPPLIER FORM MODAL ─────────────────────────────*/
 function SupplierFormModal({ supplier, onSave, onDelete, onClose }) {
+  const { t } = useLang();
   const [f,setF] = useState({
     name:          supplier?.name||"",
     contactPerson: supplier?.contactPerson||"",
@@ -648,27 +656,27 @@ function SupplierFormModal({ supplier, onSave, onDelete, onClose }) {
   };
 
   return (
-    <PuModal title={supplier?"Edit Supplier":"New Supplier"} onClose={onClose}>
-      <SupplierField label="SUPPLIER NAME *" value={f.name||""}          onChange={e=>set("name",e.target.value)}          ph="e.g. Fresh Foods Co."    error={errors.name}/>
-      <SupplierField label="CONTACT PERSON"  value={f.contactPerson||""} onChange={e=>set("contactPerson",e.target.value)} ph="Contact name"/>
-      <SupplierField label="PHONE"           value={f.phone||""}         onChange={e=>set("phone",e.target.value)}          ph="+961 1 000 000"          error={errors.phone}/>
-      <SupplierField label="EMAIL"           value={f.email||""}         onChange={e=>set("email",e.target.value)}          ph="supplier@example.com" type="email" error={errors.email}/>
-      <SupplierField label="ADDRESS"         value={f.address||""}       onChange={e=>set("address",e.target.value)}        ph="Street, City"/>
-      <SupplierField label="NOTES"           value={f.notes||""}         onChange={e=>set("notes",e.target.value)}          ph="Any notes…"/>
+    <PuModal title={supplier?`${t("edit")} ${t("suppliersLabel")}`:t("addSupplierBtn")} onClose={onClose}>
+      <SupplierField label={t("supplierName").toUpperCase()+" *"} value={f.name||""} onChange={e=>set("name",e.target.value)} ph="e.g. Fresh Foods Co." error={errors.name}/>
+      <SupplierField label={t("fullNameField")} value={f.contactPerson||""} onChange={e=>set("contactPerson",e.target.value)} ph="Contact name"/>
+      <SupplierField label={t("phoneField")} value={f.phone||""} onChange={e=>set("phone",e.target.value)} ph="+961 1 000 000" error={errors.phone}/>
+      <SupplierField label={t("emailField")} value={f.email||""} onChange={e=>set("email",e.target.value)} ph="supplier@example.com" type="email" error={errors.email}/>
+      <SupplierField label={t("addressField")} value={f.address||""} onChange={e=>set("address",e.target.value)} ph="Street, City"/>
+      <SupplierField label={t("notesOptional")} value={f.notes||""} onChange={e=>set("notes",e.target.value)} ph={t("anyNotes")}/>
       <div style={{marginBottom:14}}>
-        <Label>STATUS</Label>
+        <Label>{t("status").toUpperCase()}</Label>
         <div style={{display:"flex",gap:8}}>
           {["active","inactive"].map(s=>(
             <button key={s} className="pu-btn" onClick={()=>set("status",s)}
               style={{flex:1,background:f.status===s?C.acc+"22":"transparent",border:`1px solid ${f.status===s?C.acc+"60":C.bdr}`,color:f.status===s?C.acc:C.muted,borderRadius:7,padding:"7px 0",cursor:"pointer",fontWeight:700,fontSize:12,fontFamily:"inherit"}}>
-              {s.charAt(0).toUpperCase()+s.slice(1)}
+              {s==="active"?t("active"):t("inactive")}
             </button>
           ))}
         </div>
       </div>
       <div style={{display:"flex",gap:8}}>
-        <button className="pu-btn" onClick={()=>{ const errs=validate(); if(Object.keys(errs).length){setErrors(errs);return;} onSave(f); }} style={{...Btn(C.acc),flex:1}}>Save</button>
-        <button className="pu-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>
+        <button className="pu-btn" onClick={()=>{ const errs=validate(); if(Object.keys(errs).length){setErrors(errs);return;} onSave(f); }} style={{...Btn(C.acc),flex:1}}>{t("save")}</button>
+        <button className="pu-btn" onClick={onClose} style={{...Ghost(),flex:1}}>{t("cancel")}</button>
         {onDelete&&<button className="pu-btn" onClick={onDelete} style={Btn(C.danger,"#fff")}>🗑</button>}
       </div>
     </PuModal>
@@ -677,16 +685,17 @@ function SupplierFormModal({ supplier, onSave, onDelete, onClose }) {
 
 /* ── SUPPLIER DETAIL MODAL ───────────────────────────*/
 function SupplierDetailModal({ supplier, pos, onEdit, onClose, onNewPO }) {
+  const { t } = useLang();
   const supPos = pos.filter(p=>p.supplierId===supplier.id);
   const totalSpend = supPos.filter(p=>p.status==="Received").reduce((s,p)=>s+safeNum(p.total),0);
   return (
     <PuModal title={`🏢 ${supplier.name}`} onClose={onClose} wide>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
         {[
-          {l:"Contact", v:supplier.contactPerson||"—"},
-          {l:"Phone",   v:supplier.phone||"—"},
-          {l:"Email",   v:supplier.email||"—"},
-          {l:"Status",  v:supplier.status||"active"},
+          {l:t("fullNameField"), v:supplier.contactPerson||"—"},
+          {l:t("phoneField"),    v:supplier.phone||"—"},
+          {l:t("emailField"),    v:supplier.email||"—"},
+          {l:t("status"),        v:supplier.status||"active"},
         ].map(r=>(
           <div key={r.l} style={{background:C.bg,borderRadius:8,padding:"8px 12px"}}>
             <div style={{fontSize:9,color:C.muted,fontWeight:700,letterSpacing:"0.08em",marginBottom:2}}>{r.l}</div>
@@ -698,9 +707,9 @@ function SupplierDetailModal({ supplier, pos, onEdit, onClose, onNewPO }) {
       {supplier.notes&&<div style={{fontSize:12,color:C.muted,marginBottom:10,padding:"6px 10px",background:C.bg,borderRadius:7}}>📝 {supplier.notes}</div>}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
         {[
-          {l:"Total Orders",   v:supPos.length,              c:C.info},
-          {l:"Received",       v:supPos.filter(p=>p.status==="Received").length, c:C.success},
-          {l:"Total Spend",    v:CUR(totalSpend),             c:C.acc},
+          {l:t("totalPOs"),       v:supPos.length,              c:C.info},
+          {l:t("received"),       v:supPos.filter(p=>p.status==="Received").length, c:C.success},
+          {l:t("totalSpend"),     v:CUR(totalSpend),             c:C.acc},
         ].map(m=>(
           <div key={m.l} style={{background:C.bg,borderRadius:8,padding:"10px 12px",textAlign:"center"}}>
             <div style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:900,fontSize:18,color:m.c}}>{m.v}</div>
@@ -721,9 +730,9 @@ function SupplierDetailModal({ supplier, pos, onEdit, onClose, onNewPO }) {
         );
       })}
       <div style={{display:"flex",gap:8,marginTop:14}}>
-        <button className="pu-btn" onClick={onNewPO} style={{...Btn(C.acc),flex:1}}>+ New PO</button>
-        <button className="pu-btn" onClick={onEdit} style={{...Ghost(C.info)}}>✏ Edit</button>
-        <button className="pu-btn" onClick={onClose} style={Ghost()}>Close</button>
+        <button className="pu-btn" onClick={onNewPO} style={{...Btn(C.acc),flex:1}}>{t("newPOBtn")}</button>
+        <button className="pu-btn" onClick={onEdit} style={{...Ghost(C.info)}}>{t("edit")}</button>
+        <button className="pu-btn" onClick={onClose} style={Ghost()}>{t("close")}</button>
       </div>
     </PuModal>
   );
@@ -731,8 +740,9 @@ function SupplierDetailModal({ supplier, pos, onEdit, onClose, onNewPO }) {
 
 /* ── SUPPLIER CARD ───────────────────────────────────*/
 function SupplierCard({ s, pos, onEdit, onNewPO }) {
+  const { t } = useLang();
   const supPos  = pos.filter(p=>p.supplierId===s.id);
-  const spend   = supPos.filter(p=>p.status==="Received").reduce((t,p)=>t+safeNum(p.total),0);
+  const spend   = supPos.filter(p=>p.status==="Received").reduce((sum,p)=>sum+safeNum(p.total),0);
   const pending = supPos.filter(p=>p.status==="Ordered").length;
   const inactive= s.status==="inactive";
   return (
@@ -743,13 +753,13 @@ function SupplierCard({ s, pos, onEdit, onNewPO }) {
           {s.contactPerson&&<div style={{fontSize:11,color:C.muted}}>{s.contactPerson}</div>}
           {s.phone&&<div style={{fontSize:11,color:C.muted}}>📞 {s.phone}</div>}
         </div>
-        {inactive&&<span style={{background:"#2a2a2a",color:C.muted,borderRadius:6,padding:"2px 8px",fontSize:9,fontWeight:700}}>INACTIVE</span>}
-        {pending>0&&<span style={{background:C.info+"18",color:C.info,borderRadius:6,padding:"2px 8px",fontSize:9,fontWeight:800}}>📦 {pending} pending</span>}
+        {inactive&&<span style={{background:"#2a2a2a",color:C.muted,borderRadius:6,padding:"2px 8px",fontSize:9,fontWeight:700}}>{t("inactive")}</span>}
+        {pending>0&&<span style={{background:C.info+"18",color:C.info,borderRadius:6,padding:"2px 8px",fontSize:9,fontWeight:800}}>📦 {pending} {t("pendingLabel")}</span>}
       </div>
       <div style={{display:"flex",gap:8,marginBottom:10}}>
         {[
-          {l:"Orders",    v:supPos.length,   c:C.info},
-          {l:"Spend",     v:CUR(spend),      c:C.acc},
+          {l:t("totalPOs"),   v:supPos.length,   c:C.info},
+          {l:t("totalSpend"), v:CUR(spend),      c:C.acc},
         ].map(m=>(
           <div key={m.l} style={{flex:1,background:C.bg,borderRadius:7,padding:"7px 10px",textAlign:"center"}}>
             <div style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:800,fontSize:14,color:m.c}}>{m.v}</div>
@@ -758,8 +768,8 @@ function SupplierCard({ s, pos, onEdit, onNewPO }) {
         ))}
       </div>
       <div style={{display:"flex",gap:5}}>
-        <button className="pu-btn" onClick={onNewPO} style={{...Btn(C.acc,undefined,true),flex:1}}>+ PO</button>
-        <button className="pu-btn" onClick={onEdit} style={{...Ghost(C.muted,true),flex:1}}>Edit</button>
+        <button className="pu-btn" onClick={onNewPO} style={{...Btn(C.acc,undefined,true),flex:1}}>{t("newPOBtn")}</button>
+        <button className="pu-btn" onClick={onEdit} style={{...Ghost(C.muted,true),flex:1}}>{t("edit")}</button>
       </div>
     </div>
   );
@@ -767,6 +777,7 @@ function SupplierCard({ s, pos, onEdit, onNewPO }) {
 
 /* ── PURCHASE REPORTS ────────────────────────────────*/
 function PurchaseReports({ pos, suppliers, useFirebase, firebaseServices }) {
+  const { t } = useLang();
   const [monthly, setMonthly]   = useState([]);
   const [topItems, setTopItems] = useState([]);
   const [spendBySup, setSpend]  = useState([]);
@@ -792,10 +803,10 @@ function PurchaseReports({ pos, suppliers, useFirebase, firebaseServices }) {
       {/* KPI */}
       <div style={{gridColumn:"span 2",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
         {[
-          {l:"Total Spend",     v:CUR(totalSpend),                  c:C.acc},
-          {l:"Avg per Order",   v:CUR(received.length?totalSpend/received.length:0), c:C.info},
-          {l:"Total Suppliers", v:suppliers.filter(s=>s.status!=="inactive").length, c:C.success},
-          {l:"Received POs",    v:received.length,                  c:C.success},
+          {l:t("totalSpend"),     v:CUR(totalSpend),                  c:C.acc},
+          {l:t("avgPerOrder"),    v:CUR(received.length?totalSpend/received.length:0), c:C.info},
+          {l:t("totalSuppliers"), v:suppliers.filter(s=>s.status!=="inactive").length, c:C.success},
+          {l:t("receivedPOs"),    v:received.length,                  c:C.success},
         ].map(m=>(
           <div key={m.l} style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:10,padding:"12px 14px"}}>
             <div style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:900,fontSize:18,color:m.c,marginBottom:3}}>{m.v}</div>
@@ -806,7 +817,7 @@ function PurchaseReports({ pos, suppliers, useFirebase, firebaseServices }) {
 
       {/* Monthly spend */}
       <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-        <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:14,letterSpacing:"0.04em"}}>📅 MONTHLY SPEND</div>
+        <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:14,letterSpacing:"0.04em"}}>📅 {t("monthlySpendRepTitle")}</div>
         {monthly.map(m=>(
           <div key={m.month} style={{marginBottom:9}}>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
@@ -822,16 +833,16 @@ function PurchaseReports({ pos, suppliers, useFirebase, firebaseServices }) {
 
       {/* Spend by supplier */}
       <div style={{background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-        <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:14,letterSpacing:"0.04em"}}>🏢 SPEND BY SUPPLIER</div>
+        <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:14,letterSpacing:"0.04em"}}>🏢 {t("spendBySupTitle")}</div>
         {spendBySup.length===0
-          ? <EmptyMsg icon="🏢" msg="No received POs yet"/>
+          ? <EmptyMsg icon="🏢" msg={t("noReceivedPOsYet")}/>
           : spendBySup.map((s,i)=>{
             const COLS=["#f0a500","#58a6ff","#3fb950","#f85149","#a78bfa","#fb923c"];
             const col=COLS[i%COLS.length];
             return(
               <div key={s.supplierId} style={{marginBottom:9}}>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
-                  <span style={{color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{s.supplierName||"Unknown"}</span>
+                  <span style={{color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{s.supplierName||t("unknown")}</span>
                   <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:700,color:col,marginLeft:8}}>{CUR(s.total)}</span>
                 </div>
                 <div style={{height:5,background:C.bg,borderRadius:3}}>
@@ -845,9 +856,9 @@ function PurchaseReports({ pos, suppliers, useFirebase, firebaseServices }) {
 
       {/* Top purchased items */}
       <div style={{gridColumn:"span 2",background:C.card,border:`1px solid ${C.bdr}`,borderRadius:12,padding:16}}>
-        <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>📦 MOST PURCHASED ITEMS</div>
+        <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:12,letterSpacing:"0.04em"}}>📦 {t("topPurchasedTitle")}</div>
         {topItems.length===0
-          ? <EmptyMsg icon="📦" msg="No received POs yet"/>
+          ? <EmptyMsg icon="📦" msg={t("noReceivedPOsYet")}/>
           : (
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
               {topItems.map((it,i)=>(

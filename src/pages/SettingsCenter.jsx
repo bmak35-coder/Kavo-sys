@@ -171,10 +171,10 @@ export default function SettingsCenter({ onBack }) {
       }
       
       setDirty(false);
-      showToast("Settings saved");
+      showToast(t("saveAll"));
     } catch(e) {
       console.error('Error saving settings:', e);
-      showToast("Save failed: " + (e.message||"error"), "err");
+      showToast(`${t("savingLabel")} ${t("cancel")}: ` + (e.message||"error"), "err");
     }
     setSaving(false);
   };
@@ -202,7 +202,7 @@ export default function SettingsCenter({ onBack }) {
 
       {/* ═══ HEADER ═══ */}
       <header style={{ background:C.surf, borderBottom:`2px solid ${C.acc}`, padding:"0 20px", height:56, display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
-        <button className="sc-btn" onClick={onBack} style={Ghost(C.muted,true)}>← Back</button>
+        <button className="sc-btn" onClick={onBack} style={Ghost(C.muted,true)}>← {t("back")}</button>
         <div style={{ width:1, height:26, background:C.bdr }}/>
         <span style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:900, fontSize:18, color:C.acc, letterSpacing:"0.07em" }}>
           KAVO<span style={{color:C.text,opacity:0.3}}>-SYS</span>
@@ -213,13 +213,13 @@ export default function SettingsCenter({ onBack }) {
         {dirty && (
           <div style={{ fontSize:11, color:C.warn, display:"flex", alignItems:"center", gap:6 }}>
             <span style={{ width:6, height:6, borderRadius:"50%", background:C.warn, display:"inline-block" }}/>
-            Unsaved changes
+            {t("unsavedChanges")}
           </div>
         )}
 
         <button className="sc-btn" onClick={save} disabled={saving || !dirty}
           style={{ ...Btn(dirty?C.acc:C.bdr, dirty?"#000":C.muted), opacity:(!dirty||saving)?0.5:1, display:"flex", alignItems:"center", gap:7 }}>
-          {saving ? <><Spin/>Saving…</> : "💾 Save All"}
+          {saving ? <><Spin/>{t("savingLabel")}</> : `💾 ${t("saveAll")}`}
         </button>
 
         <div style={{ background:"#f0a50018", border:"1px solid #f0a50040", borderRadius:20, padding:"3px 12px", display:"flex", alignItems:"center", gap:6 }}>
@@ -262,14 +262,14 @@ export default function SettingsCenter({ onBack }) {
                 <LogoUpload value={app.logo} onChange={v => setA("logo", v)}/>
 
                 <Grid>
-                  <Field label={t("businessName")} value={app.businessName||""} onChange={v=>setA("businessName",v)} placeholder="KAVO Restaurant"/>
-                  <Field label="Branch Name"   value={app.branch||""}       onChange={v=>setA("branch",v)}       placeholder="Main Branch"/>
-                  <Field label="Address"        value={app.address||""}      onChange={v=>setA("address",v)}      placeholder="123 Main Street, City"/>
-                  <Field label="Phone"          value={app.phone||""}        onChange={v=>setA("phone",v)}        placeholder="+961 1 000 000"/>
-                  <Field label="Email"          value={app.email||""}        onChange={v=>setA("email",v)}        type="email" placeholder="info@restaurant.com"/>
-                  <Field label={t("taxNumber")} value={app.taxNumber||""} onChange={v=>setA("taxNumber",v)}    placeholder="TRN-000-000-000"/>
-                  <Field label="Website"        value={app.website||""}      onChange={v=>setA("website",v)}      placeholder="www.yourrestaurant.com"/>
-                  <Field label="Default Cashier Name" value={app.cashier||""} onChange={v=>setA("cashier",v)}    placeholder="Cashier name shown on receipts"/>
+                  <Field label={t("businessName")}        value={app.businessName||""} onChange={v=>setA("businessName",v)} placeholder="KAVO Restaurant"/>
+                  <Field label={t("branchNameField")}    value={app.branch||""}       onChange={v=>setA("branch",v)}       placeholder="Main Branch"/>
+                  <Field label={t("addressField")}       value={app.address||""}      onChange={v=>setA("address",v)}      placeholder="123 Main Street, City"/>
+                  <Field label={t("phoneField")}         value={app.phone||""}        onChange={v=>setA("phone",v)}        placeholder="+961 1 000 000"/>
+                  <Field label={t("emailField")}         value={app.email||""}        onChange={v=>setA("email",v)}        type="email" placeholder="info@restaurant.com"/>
+                  <Field label={t("taxNumber")}          value={app.taxNumber||""}    onChange={v=>setA("taxNumber",v)}    placeholder="TRN-000-000-000"/>
+                  <Field label={t("websiteField")}       value={app.website||""}      onChange={v=>setA("website",v)}      placeholder="www.yourrestaurant.com"/>
+                  <Field label={t("defaultCashierName")} value={app.cashier||""}      onChange={v=>setA("cashier",v)}      placeholder="Cashier name shown on receipts"/>
                 </Grid>
 
                 <InfoBox>Business name and branch are displayed in the POS header, all receipts, and shift reports.</InfoBox>
@@ -281,32 +281,32 @@ export default function SettingsCenter({ onBack }) {
               <Section title="💱 Currency Settings" desc="Configure how prices are displayed and optionally show a secondary currency.">
                 <Grid>
                   <div>
-                    <FLabel>PRIMARY CURRENCY</FLabel>
+                    <FLabel>{t("primaryCurrency").toUpperCase()}</FLabel>
                     <select value={currency.primaryCurrency||"USD"} onChange={e => { const s=e.target.value; setC("primaryCurrency",s); setC("primarySymbol",s==="USD"?"$":s==="EUR"?"€":s==="GBP"?"£":s==="LBP"?"L.L.":s==="AED"?"AED ":"$"); }} style={SelS()}>
                       {[["USD","US Dollar ($)"],["EUR","Euro (€)"],["GBP","British Pound (£)"],["LBP","Lebanese Pound (L.L.)"],["AED","UAE Dirham (AED)"],["SAR","Saudi Riyal (SAR)"],["QAR","Qatari Riyal (QAR)"],["KWD","Kuwaiti Dinar (KWD)"]].map(([v,l])=><option key={v} value={v}>{l}</option>)}
                     </select>
                   </div>
-                  <Field label="PRIMARY SYMBOL" value={currency.primarySymbol||"$"} onChange={v=>setC("primarySymbol",v)} placeholder="$"/>
+                  <Field label={t("primarySymbol")} value={currency.primarySymbol||"$"} onChange={v=>setC("primarySymbol",v)} placeholder="$"/>
                   <div>
-                    <FLabel>SECONDARY CURRENCY</FLabel>
+                    <FLabel>{t("secondaryCurrency").toUpperCase()}</FLabel>
                     <select value={currency.secondaryCurrency||"LBP"} onChange={e=>setC("secondaryCurrency",e.target.value)} style={SelS()}>
                       {[["LBP","Lebanese Pound (L.L.)"],["USD","US Dollar ($)"],["EUR","Euro (€)"],["AED","UAE Dirham (AED)"],["None","None"]].map(([v,l])=><option key={v} value={v}>{l}</option>)}
                     </select>
                   </div>
-                  <Field label="SECONDARY SYMBOL" value={currency.secondarySymbol||"L.L."} onChange={v=>setC("secondarySymbol",v)} placeholder="L.L."/>
+                  <Field label={t("secondarySymbol")} value={currency.secondarySymbol||"L.L."} onChange={v=>setC("secondarySymbol",v)} placeholder="L.L."/>
                 </Grid>
 
                 {currency.secondaryCurrency !== "None" && currency.secondaryCurrency && (
                   <>
                     <div style={{ marginBottom:16 }}>
-                      <FLabel>EXCHANGE RATE — 1 {currency.primaryCurrency||"USD"} = ? {currency.secondaryCurrency||"LBP"}</FLabel>
+                      <FLabel>{t("exchangeRate").toUpperCase()} — 1 {currency.primaryCurrency||"USD"} = ? {currency.secondaryCurrency||"LBP"}</FLabel>
                       <div style={{ display:"flex", gap:10, alignItems:"center" }}>
                         <input type="number" min="0" step="0.01" value={currency.exchangeRate||0} onChange={e=>setC("exchangeRate",+e.target.value)}
                           style={{...Inp("200px"), fontFamily:"'JetBrains Mono',monospace", fontSize:15, fontWeight:700}}/>
                         <span style={{ fontSize:12, color:C.sub }}>1 {currency.primaryCurrency||"USD"} = {(currency.exchangeRate||0).toLocaleString()} {currency.secondaryCurrency}</span>
                       </div>
                     </div>
-                    <ToggleRow label="Show dual currency on receipts" sublabel="Prints both primary and secondary amounts on every receipt line" value={currency.showDualCurrency} onChange={v=>setC("showDualCurrency",v)}/>
+                    <ToggleRow label={t("showDualCurrencyRec")} sublabel="Prints both primary and secondary amounts on every receipt line" value={currency.showDualCurrency} onChange={v=>setC("showDualCurrency",v)}/>
                   </>
                 )}
 
@@ -319,7 +319,7 @@ export default function SettingsCenter({ onBack }) {
               <Section title="🧮 Tax & Service Charges" desc="Configure VAT and service charge rates applied to all orders.">
                 <Grid cols={2}>
                   <div>
-                    <FLabel>VAT / TAX RATE (%)</FLabel>
+                    <FLabel>{t("vatTaxRate").toUpperCase()}</FLabel>
                     <div style={{ display:"flex", gap:10, alignItems:"center" }}>
                       <input type="number" min="0" max="100" step="0.1"
                         value={app.taxRate??11}
@@ -330,7 +330,7 @@ export default function SettingsCenter({ onBack }) {
                     </div>
                   </div>
                   <div>
-                    <FLabel>SERVICE CHARGE RATE (%)</FLabel>
+                    <FLabel>{t("serviceChargeRate").toUpperCase()}</FLabel>
                     <div style={{ display:"flex", gap:10, alignItems:"center" }}>
                       <input type="number" min="0" max="100" step="0.1"
                         value={app.serviceRate??10}
@@ -343,8 +343,8 @@ export default function SettingsCenter({ onBack }) {
                 </Grid>
 
                 <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap" }}>
-                  <ToggleRow label="Enable VAT / Tax" sublabel="Apply tax to all orders" value={pos.enableTax!==false} onChange={v=>setP("enableTax",v)}/>
-                  <ToggleRow label="Enable Service Charge" sublabel="Apply service charge to all orders" value={pos.enableService!==false} onChange={v=>setP("enableService",v)}/>
+                  <ToggleRow label={t("enableVAT")} sublabel={t("applyTaxAllOrders")} value={pos.enableTax!==false} onChange={v=>setP("enableTax",v)}/>
+                  <ToggleRow label={t("enableServiceCharge")} sublabel={t("applyServiceAll")} value={pos.enableService!==false} onChange={v=>setP("enableService",v)}/>
                 </div>
 
                 {/* Live preview */}
@@ -356,12 +356,12 @@ export default function SettingsCenter({ onBack }) {
             {tab === "receipt" && (
               <Section title="🖨 Receipt Settings" desc="Customise thermal receipt output, paper size, and footer messages.">
                 <Grid>
-                  <Field label="RECEIPT FOOTER LINE 1" value={receipt.footerLine1||""} onChange={v=>setR("footerLine1",v)} placeholder="Thank you for dining with us!"/>
-                  <Field label="RECEIPT FOOTER LINE 2" value={receipt.footerLine2||""} onChange={v=>setR("footerLine2",v)} placeholder="Please come again soon"/>
+                  <Field label={t("receiptFooter1")} value={receipt.footerLine1||""} onChange={v=>setR("footerLine1",v)} placeholder="Thank you for dining with us!"/>
+                  <Field label={t("receiptFooter2")} value={receipt.footerLine2||""} onChange={v=>setR("footerLine2",v)} placeholder="Please come again soon"/>
                 </Grid>
 
                 <div style={{ marginBottom:20 }}>
-                  <FLabel>THERMAL PAPER SIZE</FLabel>
+                  <FLabel>{t("thermalPaperSize").toUpperCase()}</FLabel>
                   <div style={{ display:"flex", gap:10 }}>
                     {[["58mm","58mm (Compact)"],["80mm","80mm (Standard)"]].map(([v,l]) => (
                       <button key={v} className="sc-btn" onClick={() => setR("paperWidth",v)}
@@ -373,10 +373,10 @@ export default function SettingsCenter({ onBack }) {
                 </div>
 
                 <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:20 }}>
-                  <ToggleRow label="Auto-print after payment" sublabel="Opens print dialog automatically when an order is paid" value={receipt.autoPrint} onChange={v=>setR("autoPrint",v)}/>
-                  <ToggleRow label="Show QR code on receipt" sublabel="Prints a QR pattern with the receipt ID" value={receipt.showQR} onChange={v=>setR("showQR",v)}/>
+                  <ToggleRow label={t("autoPrintAfterPay")} sublabel="Opens print dialog automatically when an order is paid" value={receipt.autoPrint} onChange={v=>setR("autoPrint",v)}/>
+                  <ToggleRow label={t("showQRReceipt")} sublabel="Prints a QR pattern with the receipt ID" value={receipt.showQR} onChange={v=>setR("showQR",v)}/>
                   {currency.showDualCurrency && (
-                    <ToggleRow label="Show dual currency on receipt" sublabel="Already enabled in Currency settings" value={true} onChange={() => {}} disabled/>
+                    <ToggleRow label={t("showDualCurrencyRec2")} sublabel="Already enabled in Currency settings" value={true} onChange={() => {}} disabled/>
                   )}
                 </div>
 
@@ -389,15 +389,15 @@ export default function SettingsCenter({ onBack }) {
             {tab === "pos" && (
               <Section title="⚙ POS Behaviour" desc="Control how the POS operates during a shift.">
                 <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
-                  <ToggleRow label="Prevent negative stock" sublabel="Blocks selling items when inventory would go below zero" value={pos.preventNegativeStock} onChange={v=>setP("preventNegativeStock",v)}/>
-                  <ToggleRow label="Require customer name for delivery" sublabel="Makes customer name mandatory for delivery orders" value={pos.requireCustomerDelivery} onChange={v=>setP("requireCustomerDelivery",v)}/>
-                  <ToggleRow label="Require open shift before selling" sublabel="Cashiers cannot process orders without an active shift" value={pos.requireShiftToSell} onChange={v=>setP("requireShiftToSell",v)}/>
+                  <ToggleRow label={t("preventNegStock")} sublabel="Blocks selling items when inventory would go below zero" value={pos.preventNegativeStock} onChange={v=>setP("preventNegativeStock",v)}/>
+                  <ToggleRow label={t("requireCustNameDel")} sublabel="Makes customer name mandatory for delivery orders" value={pos.requireCustomerDelivery} onChange={v=>setP("requireCustomerDelivery",v)}/>
+                  <ToggleRow label={t("requireOpenShift")} sublabel="Cashiers cannot process orders without an active shift" value={pos.requireShiftToSell} onChange={v=>setP("requireShiftToSell",v)}/>
                 </div>
 
                 <div style={{ marginBottom:20 }}>
-                  <FLabel>DEFAULT ORDER TYPE</FLabel>
+                  <FLabel>{t("defaultOrderTypeField").toUpperCase()}</FLabel>
                   <div style={{ display:"flex", gap:8 }}>
-                    {[["dine-in","🍽 Dine-In"],["takeaway","🛍 Takeaway"],["delivery","🛵 Delivery"]].map(([v,l]) => (
+                    {[["dine-in",`🍽 ${t("dineIn")}`],["takeaway",`🛍 ${t("takeaway")}`],["delivery",`🛵 ${t("delivery")}`]].map(([v,l]) => (
                       <button key={v} className="sc-btn" onClick={() => setP("defaultOrderType",v)}
                         style={{ background:pos.defaultOrderType===v?C.acc+"22":"transparent", border:`1px solid ${pos.defaultOrderType===v?C.acc+"70":C.bdr}`, color:pos.defaultOrderType===v?C.acc:C.muted, borderRadius:9, padding:"9px 18px", cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"inherit" }}>
                         {l}
@@ -433,6 +433,7 @@ export default function SettingsCenter({ onBack }) {
 ══════════════════════════════════════════════════════ */
 
 function SecurityPanel({ users, onRefresh, showToast, firebaseServices, useFirebase }) {
+  const { t } = useLang();
   const [modal,    setModal]    = useState(null);  // "editUser"|"addUser"|"permissions"
   const [selUser,  setSelUser]  = useState(null);
   const [delConfirm,setDelConfirm] = useState(null);
@@ -464,13 +465,13 @@ function SecurityPanel({ users, onRefresh, showToast, firebaseServices, useFireb
       {/* Users list */}
       <div style={{ marginBottom:28 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-          <SectionLabel icon="👤" label="System Users"/>
-          <button className="sc-btn" onClick={() => { setSelUser(null); setModal("addUser"); }} style={Btn(C.acc)}>+ Add User</button>
+          <SectionLabel icon="👤" label={t("systemUsersLabel")}/>
+          <button className="sc-btn" onClick={() => { setSelUser(null); setModal("addUser"); }} style={Btn(C.acc)}>+ {t("addUserBtnLabel")}</button>
         </div>
         <div style={{ background:C.card, border:`1px solid ${C.bdr}`, borderRadius:12, overflow:"hidden" }}>
           {/* Table header */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 130px 110px 160px", gap:0, padding:"8px 16px", background:"#0a1020", borderBottom:`1px solid ${C.bdr}` }}>
-            {["Name / Username","Role","Status","Actions"].map(h=>(
+            {[t("nameUsernameCol"), t("roleField"), t("active"), t("actions")].map(h=>(
               <span key={h} style={{ fontSize:9, color:C.muted, fontWeight:700, letterSpacing:"0.08em" }}>{h}</span>
             ))}
           </div>
@@ -489,10 +490,10 @@ function SecurityPanel({ users, onRefresh, showToast, firebaseServices, useFireb
                   </span>
                 </div>
                 <div>
-                  <span style={{ background:C.success+"18", color:C.success, borderRadius:6, padding:"2px 9px", fontSize:10, fontWeight:700 }}>Active</span>
+                  <span style={{ background:C.success+"18", color:C.success, borderRadius:6, padding:"2px 9px", fontSize:10, fontWeight:700 }}>{t("active")}</span>
                 </div>
                 <div style={{ display:"flex", gap:5 }}>
-                  <button className="sc-btn" onClick={() => { setSelUser(u); setModal("editUser"); }} style={Ghost(C.info, true)}>✏ Edit</button>
+                  <button className="sc-btn" onClick={() => { setSelUser(u); setModal("editUser"); }} style={Ghost(C.info, true)}>✏ {t("edit")}</button>
                   {u.id !== "u1" && u.username !== "admin" && (
                     <button className="sc-btn" onClick={() => setDelConfirm(u)} style={Ghost(C.danger, true)}>🗑</button>
                   )}
@@ -509,7 +510,7 @@ function SecurityPanel({ users, onRefresh, showToast, firebaseServices, useFireb
       {/* Role Permissions */}
       <div>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-          <SectionLabel icon="🔐" label="Role Permissions"/>
+          <SectionLabel icon="🔐" label={t("rolePermissions")}/>
           <div style={{ display:"flex", gap:6 }}>
             {ROLES.map(r => {
               const m = ROLE_META[r];
@@ -535,10 +536,10 @@ function SecurityPanel({ users, onRefresh, showToast, firebaseServices, useFireb
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                   <span style={{ fontSize:11, color:granted?C.success:C.danger, fontWeight:700 }}>
-                    {granted ? "✅ Allowed" : "🚫 Denied"}
+                    {granted ? `✅ ${t("allowedLabel")}` : `🚫 ${t("deniedLabel")}`}
                   </span>
                   {isAdmin && (
-                    <span style={{ fontSize:10, color:C.acc, background:C.acc+"18", borderRadius:6, padding:"2px 8px" }}>Full access</span>
+                    <span style={{ fontSize:10, color:C.acc, background:C.acc+"18", borderRadius:6, padding:"2px 8px" }}>{t("fullAccessLabel")}</span>
                   )}
                 </div>
               </div>
@@ -588,13 +589,13 @@ function SecurityPanel({ users, onRefresh, showToast, firebaseServices, useFireb
       {delConfirm && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.78)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9000, padding:16 }}>
           <div style={{ background:C.card2, border:`1px solid ${C.bdr}`, borderRadius:14, padding:"24px 22px", width:360, maxWidth:"96vw" }}>
-            <div style={{ fontWeight:800, color:C.text, marginBottom:8 }}>Delete user?</div>
+            <div style={{ fontWeight:800, color:C.text, marginBottom:8 }}>{t("delete")}?</div>
             <div style={{ fontSize:13, color:C.sub, marginBottom:20 }}>
               Remove <strong style={{color:C.text}}>{delConfirm.name}</strong> (@{delConfirm.username})? They will no longer be able to log in.
             </div>
             <div style={{ display:"flex", gap:8 }}>
-              <button className="sc-btn" onClick={() => handleDelete(delConfirm)} style={{...Btn(C.danger,"#fff"),flex:1}}>Delete</button>
-              <button className="sc-btn" onClick={() => setDelConfirm(null)} style={{...Ghost(),flex:1}}>Cancel</button>
+              <button className="sc-btn" onClick={() => handleDelete(delConfirm)} style={{...Btn(C.danger,"#fff"),flex:1}}>{t("delete")}</button>
+              <button className="sc-btn" onClick={() => setDelConfirm(null)} style={{...Ghost(),flex:1}}>{t("cancel")}</button>
             </div>
           </div>
         </div>
@@ -605,6 +606,7 @@ function SecurityPanel({ users, onRefresh, showToast, firebaseServices, useFireb
 
 /* ── USER FORM MODAL ─────────────────────────────────*/
 function UserFormModal({ user, onSave, onClose }) {
+  const { t } = useLang();
   const [name,     setName]    = useState(user?.name     || "");
   const [username, setUsername]= useState(user?.username || "");
   const [password, setPassword]= useState("");
@@ -640,20 +642,20 @@ function UserFormModal({ user, onSave, onClose }) {
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.78)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9000, padding:16 }}>
       <div style={{ background:C.card2, border:`1px solid ${C.bdr}`, borderRadius:14, padding:"22px 20px", width:400, maxWidth:"96vw", boxShadow:"0 24px 64px rgba(0,0,0,0.6)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
-          <span style={{ fontWeight:800, fontSize:15, color:C.text }}>{user ? "Edit User" : "New User"}</span>
+          <span style={{ fontWeight:800, fontSize:15, color:C.text }}>{user ? t("edit") : t("addUserBtnLabel")}</span>
           <button onClick={onClose} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:20, padding:0 }}>✕</button>
         </div>
 
         <div style={{ marginBottom:12 }}>
-          <FLabel>FULL NAME</FLabel>
+          <FLabel>{t("fullNameField").toUpperCase()}</FLabel>
           <input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Alex Kassem" style={Inp()}/>
         </div>
         <div style={{ marginBottom:12 }}>
-          <FLabel>USERNAME</FLabel>
+          <FLabel>{t("usernameField").toUpperCase()}</FLabel>
           <input value={username} onChange={e=>setUsername(e.target.value)} placeholder="e.g. cashier1" style={{...Inp(), fontFamily:"'JetBrains Mono',monospace"}}/>
         </div>
         <div style={{ marginBottom:12 }}>
-          <FLabel>{user ? "NEW PASSWORD (leave blank to keep current)" : "PASSWORD"}</FLabel>
+          <FLabel>{user ? t("newPassKeepHint").toUpperCase() : t("passwordField").toUpperCase()}</FLabel>
           <div style={{ position:"relative" }}>
             <input type={showPwd?"text":"password"} value={password} onChange={e=>{setPassword(e.target.value);setPwdError("");}} placeholder={user?"••••••••":"Min 6 characters"} style={{...Inp(), paddingRight:40, border:`1px solid ${pwdError ? "#f8514960" : C.bdr}`}}/>
             <button onClick={()=>setShowPwd(!showPwd)} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:16 }}>
@@ -663,7 +665,7 @@ function UserFormModal({ user, onSave, onClose }) {
           {pwdError && <div style={{fontSize:10,color:"#f85149",marginTop:3}}>{pwdError}</div>}
         </div>
         <div style={{ marginBottom:20 }}>
-          <FLabel>ROLE</FLabel>
+          <FLabel>{t("roleField").toUpperCase()}</FLabel>
           <div style={{ display:"flex", gap:8 }}>
             {ROLES.map(r => {
               const m = ROLE_META[r];
@@ -681,8 +683,8 @@ function UserFormModal({ user, onSave, onClose }) {
         </div>
 
         <div style={{ display:"flex", gap:8 }}>
-          <button className="sc-btn" onClick={save} style={{...Btn(C.acc),flex:1}}>Save User</button>
-          <button className="sc-btn" onClick={onClose} style={{...Ghost(),flex:1}}>Cancel</button>
+          <button className="sc-btn" onClick={save} style={{...Btn(C.acc),flex:1}}>{t("saveUserBtn")}</button>
+          <button className="sc-btn" onClick={onClose} style={{...Ghost(),flex:1}}>{t("cancel")}</button>
         </div>
       </div>
     </div>

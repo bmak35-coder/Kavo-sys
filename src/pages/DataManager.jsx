@@ -217,18 +217,18 @@ export default function DataManager({ onBack }) {
 
       {/* ═══ HEADER ═══ */}
       <header style={{ background:C.surf, borderBottom:`2px solid ${C.acc}`, padding:"0 20px", height:56, display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
-        <button className="dm-btn" onClick={onBack} style={Ghost(C.muted, true)}>← Back</button>
+        <button className="dm-btn" onClick={onBack} style={Ghost(C.muted, true)}>{t("back")}</button>
         <div style={{ width:1, height:26, background:C.bdr }}/>
         <span style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:900, fontSize:18, color:C.acc, letterSpacing:"0.07em" }}>
           KAVO<span style={{color:C.text,opacity:0.3}}>-SYS</span>
         </span>
-        <span style={{ fontSize:10, fontWeight:800, color:C.muted, letterSpacing:"0.12em" }}>DATA MANAGER</span>
+        <span style={{ fontSize:10, fontWeight:800, color:C.muted, letterSpacing:"0.12em" }}>{t("dataManagerTitle")}</span>
 
         <div style={{ flex:1 }}/>
 
         {/* Last backup */}
         <div style={{ textAlign:"right" }}>
-          <div style={{ fontSize:10, color:C.muted, letterSpacing:"0.06em" }}>LAST BACKUP</div>
+          <div style={{ fontSize:10, color:C.muted, letterSpacing:"0.06em" }}>{t("lastBackupLabel")}</div>
           <div style={{ fontSize:12, fontWeight:700, color:stats?.lastBackup ? C.success : C.danger }}>
             {stats ? fmtDate(stats.lastBackup) : "…"}
           </div>
@@ -246,7 +246,7 @@ export default function DataManager({ onBack }) {
 
           {/* ── DATABASE OVERVIEW ── */}
           <section style={{ marginBottom:28 }}>
-            <SectionTitle icon="📊" label="Database Overview"/>
+            <SectionTitle icon="📊" label={t("databaseOverview")}/>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:8 }}>
               {loading ? (
                 Array.from({length:10}).map((_,i) => (
@@ -257,15 +257,15 @@ export default function DataManager({ onBack }) {
                 ))
               ) : [
                 { label:t("orders"),         val:stats?.orders,         icon:"🧾", col:C.success },
-                { label:"Receipts",       val:stats?.receipts,       icon:"🖨", col:C.success },
+                { label:t("receiptsLabel"),   val:stats?.receipts,       icon:"🖨", col:C.success },
                 { label:t("shifts"),         val:stats?.shifts,         icon:"🕐", col:C.info    },
                 { label:t("menuItems"),     val:stats?.menu,           icon:"🍽", col:C.acc     },
                 { label:t("inventory"),      val:stats?.inventory,      icon:"📦", col:"#fb923c" },
-                { label:"Suppliers",      val:stats?.suppliers,      icon:"🏢", col:"#34d399" },
+                { label:t("suppliersLabel"),  val:stats?.suppliers,      icon:"🏢", col:"#34d399" },
                 { label:t("purchaseOrders"),val:stats?.purchaseOrders, icon:"📋", col:"#34d399" },
                 { label:t("customers"),      val:stats?.customers,      icon:"👥", col:"#a78bfa" },
-                { label:"Kitchen Orders", val:stats?.kitchen,        icon:"🍳", col:C.warn    },
-                { label:"Stock Logs",     val:stats?.stockLogs,      icon:"📝", col:C.muted   },
+                { label:t("kitchenOrdersLabel"), val:stats?.kitchen,   icon:"🍳", col:C.warn    },
+                { label:t("stockLogsLabel"),     val:stats?.stockLogs, icon:"📝", col:C.muted   },
               ].map(s => (
                 <div key={s.label} style={{ background:C.card, border:`1px solid ${C.bdr}`, borderRadius:10, padding:"12px 14px" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
@@ -282,7 +282,7 @@ export default function DataManager({ onBack }) {
 
           {/* ── EXPORT / BACKUP ── */}
           <section style={{ marginBottom:28 }}>
-            <SectionTitle icon="💾" label="Export & Backup"/>
+            <SectionTitle icon="💾" label={t("exportBackupTitle")}/>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
               {EXPORTS.map(exp => {
                 const isBusy = busy === exp.id;
@@ -324,8 +324,8 @@ export default function DataManager({ onBack }) {
                       }}
                     >
                       {isBusy
-                        ? <><Spinner size={13}/> Exporting…</>
-                        : exp.primary ? "⬇ Backup" : "⬇ CSV"}
+                        ? <><Spinner size={13}/> {t("exportingLabel")}</>
+                        : exp.primary ? t("downloadBackupBtn") : t("downloadCSVBtn")}
                     </button>
                   </div>
                 );
@@ -335,7 +335,7 @@ export default function DataManager({ onBack }) {
 
           {/* ── RESTORE ── */}
           <section style={{ marginBottom:28 }}>
-            <SectionTitle icon="📥" label="Restore from Backup"/>
+            <SectionTitle icon="📥" label={t("restoreFromBackup")}/>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
 
               {/* Drop zone */}
@@ -357,14 +357,14 @@ export default function DataManager({ onBack }) {
                 }}>
                 <div style={{ fontSize:36, marginBottom:10 }}>📂</div>
                 <div style={{ fontWeight:700, color:C.text, marginBottom:5, fontSize:14 }}>
-                  Drop backup file here
+                  {t("dropBackupHere")}
                 </div>
                 <div style={{ fontSize:12, color:C.muted, marginBottom:14 }}>
-                  or click to browse · accepts .json files only
+                  {t("browseFileHint")}
                 </div>
                 <button className="dm-btn" onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}
                   style={Btn(C.info, "#000")}>
-                  Browse File
+                  {t("browseFile")}
                 </button>
                 <input ref={fileRef} type="file" accept=".json" style={{ display:"none" }}
                   onChange={e => { handleFileSelect(e.target.files[0]); e.target.value=""; }}/>
@@ -372,7 +372,7 @@ export default function DataManager({ onBack }) {
 
               {/* Restore info */}
               <div style={{ background:C.card, border:`1px solid ${C.bdr}`, borderRadius:12, padding:"16px 18px" }}>
-                <div style={{ fontWeight:800, color:C.text, marginBottom:12, fontSize:14 }}>What gets restored</div>
+                <div style={{ fontWeight:800, color:C.text, marginBottom:12, fontSize:14 }}>{t("whatGetsRestored")}</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                   {[
                     ["✅","Orders & receipts"],
@@ -395,7 +395,7 @@ export default function DataManager({ onBack }) {
 
                 {busy === "restore" && (
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:14, padding:"8px 12px", background:C.info+"18", borderRadius:8, fontSize:12, color:C.info }}>
-                    <Spinner size={14}/> Restoring data…
+                    <Spinner size={14}/> {t("restoringData")}
                   </div>
                 )}
               </div>
@@ -405,7 +405,7 @@ export default function DataManager({ onBack }) {
             {restoreResult && (
               <div style={{ marginTop:12, background:"#0a1a10", border:`1px solid ${C.success}40`, borderRadius:12, padding:16 }}>
                 <div style={{ fontWeight:700, color:C.success, marginBottom:10, display:"flex", alignItems:"center", gap:7 }}>
-                  ✅ Restore Complete — {fmtDate(restoreResult.meta?.exportedAt)}
+                  ✅ {t("restoreComplete")} — {fmtDate(restoreResult.meta?.exportedAt)}
                 </div>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                   {Object.entries(restoreResult.results).map(([k, v]) => (
@@ -414,39 +414,39 @@ export default function DataManager({ onBack }) {
                     </span>
                   ))}
                 </div>
-                <button onClick={() => setRestoreResult(null)} style={{ ...Ghost(C.muted, true), marginTop:10 }}>Dismiss</button>
+                <button onClick={() => setRestoreResult(null)} style={{ ...Ghost(C.muted, true), marginTop:10 }}>{t("dismiss")}</button>
               </div>
             )}
           </section>
 
           {/* ── RESET ── */}
           <section>
-            <SectionTitle icon="⚠" label="System Reset" danger/>
+            <SectionTitle icon="⚠" label={t("systemResetTitle")} danger/>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
 
               {/* Soft reset */}
               <div style={{ background:"#120a0a", border:`1px solid ${C.danger}30`, borderRadius:12, padding:"16px 18px" }}>
                 <div style={{ fontWeight:800, color:C.text, marginBottom:5, fontSize:14 }}>
-                  🗑 Clear Transaction Data
+                  {t("clearTransDataTitle")}
                 </div>
                 <div style={{ fontSize:12, color:C.muted, lineHeight:1.6, marginBottom:14 }}>
-                  Removes all orders, receipts, shifts, kitchen orders, inventory stock, and customer records. <strong style={{color:C.warn}}>Keeps menu, settings, and modifier groups.</strong>
+                  {t("clearTransDataDesc")}
                 </div>
                 <button className="dm-btn" onClick={() => { setResetModal("soft"); setResetConfirmText(""); }} style={Btn(C.danger, "#fff")}>
-                  Clear Transaction Data
+                  {t("clearTransDataBtn")}
                 </button>
               </div>
 
               {/* Hard reset */}
               <div style={{ background:"#120a0a", border:`1px solid ${C.danger}50`, borderRadius:12, padding:"16px 18px" }}>
                 <div style={{ fontWeight:800, color:C.danger, marginBottom:5, fontSize:14 }}>
-                  💥 Full System Reset
+                  {t("fullSystemResetTitle")}
                 </div>
                 <div style={{ fontSize:12, color:C.muted, lineHeight:1.6, marginBottom:14 }}>
-                  Wipes <strong style={{color:C.danger}}>everything</strong> — all data, menu, settings, modifiers, and localStorage. Page reloads after reset. Use only to start fresh.
+                  {t("fullSystemResetDesc")}
                 </div>
                 <button className="dm-btn" onClick={() => { setResetModal("hard"); setResetConfirmText(""); }} style={{...Btn(C.danger, "#fff"), border:`1px solid ${C.danger}60`}}>
-                  Full System Reset
+                  {t("fullSystemResetBtn")}
                 </button>
               </div>
             </div>
@@ -462,7 +462,7 @@ export default function DataManager({ onBack }) {
               {resetModal === "hard" ? "💥" : "🗑"}
             </div>
             <div style={{ fontWeight:900, color:C.danger, fontSize:17, textAlign:"center", marginBottom:8 }}>
-              {resetModal === "hard" ? "Full System Reset" : "Clear Transaction Data"}
+              {resetModal === "hard" ? t("fullSystemResetBtn") : t("clearTransDataBtn")}
             </div>
             <div style={{ fontSize:13, color:C.sub, textAlign:"center", lineHeight:1.7, marginBottom:18 }}>
               {resetModal === "hard"
@@ -495,7 +495,7 @@ export default function DataManager({ onBack }) {
             {/* Confirmation input */}
             <div style={{ marginBottom:16 }}>
               <div style={{ fontSize:11, color:C.muted, marginBottom:6, fontWeight:700, letterSpacing:"0.06em" }}>
-                TYPE <span style={{color:C.danger,fontFamily:"monospace",letterSpacing:"0.1em"}}>RESET</span> TO CONFIRM
+                {t("typeResetToConfirm")}
               </div>
               <input
                 value={resetConfirmText}
@@ -510,10 +510,10 @@ export default function DataManager({ onBack }) {
                 onClick={doReset}
                 disabled={resetConfirmText !== "RESET" || !!busy}
                 style={{ flex:2, ...Btn(resetConfirmText==="RESET"?C.danger:"#2a1a1a", resetConfirmText==="RESET"?"#fff":"#4a3030"), opacity:resetConfirmText!=="RESET"||busy?0.5:1 }}>
-                {busy==="reset" ? <><Spinner size={14}/> Resetting…</> : `Confirm ${resetModal==="hard"?"Full ":""}Reset`}
+                {busy==="reset" ? <><Spinner size={14}/> {t("resettingLabel")}</> : resetModal==="hard" ? t("confirmFullReset") : t("confirmReset")}
               </button>
               <button className="dm-btn" onClick={() => { setResetModal(null); setResetConfirmText(""); }} style={{...Ghost(), flex:1}}>
-                Cancel
+                {t("cancel")}
               </button>
             </div>
           </div>

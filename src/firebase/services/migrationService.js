@@ -5,13 +5,13 @@
  * Run this script to transfer all existing data to the multi-tenant Firebase system.
  */
 
-import { db as dexieDb } from '../db/db';
-import { db as firebaseDb } from '../firebase/config';
+import { db as dexieDb } from '../../db/db';
+import { db as firebaseDb } from '../config';
 import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
-import productService from '../firebase/services/productService';
-import orderService from '../firebase/services/orderService';
-import customerService from '../firebase/services/customerService';
-import tableService from '../firebase/services/tableService';
+import productService from './productService';
+import orderService from './orderService';
+import customerService from './customerService';
+import tableService from './tableService';
 
 class MigrationService {
   constructor() {
